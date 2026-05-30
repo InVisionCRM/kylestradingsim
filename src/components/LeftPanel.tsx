@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useWatchlist } from '../state/useWatchlist'
 import { useMarket } from '../state/useMarket'
-import { useWallet } from '../state/useWallet'
 import { getPair } from '../api/dexscreener'
 import { ensureLogo } from '../lib/logos'
 import { usePrices } from '../state/usePrices'
@@ -48,10 +47,7 @@ export function LeftPanel() {
 
   const select = async (chainId: string, pairAddress: string, known?: Pair) => {
     const p = known ?? (await getPair(chainId, pairAddress).catch(() => null))
-    if (p) {
-      useWallet.getState().setActiveToken(null) // a watchlist pick isn't a wallet token → hide the overlay
-      useMarket.getState().setActivePair(p)
-    }
+    if (p) useMarket.getState().setActivePair(p)
   }
 
   return (

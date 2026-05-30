@@ -114,11 +114,11 @@ export function ChartPanel() {
   // imported-wallet on-chain trades, priced approximately at each candle's close (live only)
   const rawCandles = useMarketData((s) => s.candles)
   const walletShow = useWallet((s) => s.showOverlay)
-  const walletActive = useWallet((s) => s.activeToken)
   const walletTrades = useWallet((s) => s.trades)
   const walletTradesFor = useWallet((s) => s.tradesFor)
+  const walletTokenAddr = useMarket((s) => s.activePair?.baseToken.address?.toLowerCase() ?? null)
   const walletMarkers: ChartMarker[] = useMemo(() => {
-    if (mode !== 'live' || !walletShow || !walletActive || walletTradesFor !== walletActive.address) return []
+    if (mode !== 'live' || !walletShow || !walletTokenAddr || walletTradesFor !== walletTokenAddr) return []
     if (!rawCandles.length) return []
     const out: ChartMarker[] = []
     for (const t of walletTrades) {
@@ -127,7 +127,7 @@ export function ChartPanel() {
       out.push({ time: t.ts, price, side: t.side, text: `${t.side === 'buy' ? '⊕ IN' : '⊖ OUT'} ${formatQty(t.amount)}` })
     }
     return out
-  }, [mode, walletShow, walletActive, walletTrades, walletTradesFor, rawCandles])
+  }, [mode, walletShow, walletTrades, walletTradesFor, walletTokenAddr, rawCandles])
 
   const pickTool = (id: string, overlay: string | null) => {
     setTool(id)

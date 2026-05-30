@@ -16,7 +16,7 @@ export function WalletImport() {
   const status = useWallet((s) => s.status)
   const error = useWallet((s) => s.error)
   const showOverlay = useWallet((s) => s.showOverlay)
-  const activeToken = useWallet((s) => s.activeToken)
+  const activeAddr = useMarket((s) => s.activePair?.baseToken.address?.toLowerCase() ?? null)
   const tradesLoading = useWallet((s) => s.tradesLoading)
   const tradesCount = useWallet((s) => s.trades.length)
 
@@ -43,7 +43,6 @@ export function WalletImport() {
       }
       ensureLogo(pair)
       useMarket.getState().setActivePair(pair)
-      useWallet.getState().setActiveToken({ address: h.address, chain, symbol: h.symbol })
     } catch {
       setRowErr(`Couldn't load ${h.symbol}`)
     } finally {
@@ -102,16 +101,16 @@ export function WalletImport() {
             <span className={`wchain ${chain}`}>{chain === 'pulsechain' ? 'PLS' : 'ETH'}</span>
             <span className="wcount">{holdings.length} tokens</span>
           </div>
-          {activeToken && (
+          {(tradesLoading || tradesCount > 0) && (
             <div className="wnote dim">
-              {tradesLoading ? 'Loading on-chain trades…' : `${tradesCount} ${activeToken.symbol} trades on chart`}
+              {tradesLoading ? 'Loading on-chain trades…' : `${tradesCount} trades on chart`}
             </div>
           )}
           {rowErr && <div className="wnote err">{rowErr}</div>}
           <div className="wlist scroll">
             {holdings.map((h) => {
               const key = `${chain}:${h.address}`
-              const on = activeToken?.address === h.address
+              const on = activeAddr === h.address
               return (
                 <div className={`row ${on ? 'sel' : ''}`} key={key} onClick={() => openToken(h)}>
                   <TokenIcon symbol={h.symbol} src={h.iconUrl} tokenKey={key} size={20} />

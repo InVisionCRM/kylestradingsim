@@ -1,29 +1,32 @@
 import { useEffect } from 'react'
 import { useWallet } from '../state/useWallet'
+import { useMarket } from '../state/useMarket'
 import { getTokenTransfers } from '../api/blockscout'
 import { toWalletTrades } from '../lib/walletTrades'
 
 /**
- * When a wallet token is selected for charting, fetch that wallet's full on-chain
- * transfer history for the token and map it to plottable buy/sell trades.
- * Clears when nothing is selected.
+ * Overlays the imported wallet's trades for WHATEVER token is currently charted,
+ * as long as that token is on the wallet's chain. So once a wallet is imported you
+ * can pick any token — the watchlist, the search box, or the wallet's own holdings —
+ * and see that wallet's buys/sells on it. Clears when there's no match.
  */
 export function useWalletTrades(): void {
   const wallet = useWallet((s) => s.address)
-  const tokenAddress = useWallet((s) => s.activeToken?.address)
-  const chain = useWallet((s) => s.activeToken?.chain)
+  const walletChain = useWallet((s) => s.chain)
+  const pairChain = useMarket((s) => s.activePair?.chainId)
+  const tokenAddress = useMarket((s) => s.activePair?.baseToken.address?.toLowerCase() ?? null)
+  const onWalletChain = !!walletChain && pairChain === walletChain
 
   useEffect(() => {
-    if (!wallet || !tokenAddress || !chain) {
+    if (!wallet || !walletChain || !onWalletChain || !tokenAddress) {
       useWallet.getState().setTrades(null, [])
       return
     }
     let alive = true
     useWallet.getState().setTradesLoading(true)
-    getTokenTransfers(chain, wallet, tokenAddress)
+    getTokenTransfers(walletChain, wallet, tokenAddress)
       .then((raw) => {
-        if (!alive) return
-        useWallet.getState().setTrades(tokenAddress, toWalletTrades(raw, wallet))
+        if (alive) useWallet.getState().setTrades(tokenAddress, toWalletTrades(raw, wallet))
       })
       .catch(() => {
         if (alive) useWallet.getState().setTrades(tokenAddress, [])
@@ -34,5 +37,5 @@ export function useWalletTrades(): void {
     return () => {
       alive = false
     }
-  }, [wallet, tokenAddress, chain])
+  }, [wallet, walletChain, onWalletChain, tokenAddress])
 }

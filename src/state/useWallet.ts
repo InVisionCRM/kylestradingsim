@@ -5,13 +5,6 @@ import type { WalletTrade } from '../lib/walletTrades'
 
 export type WalletStatus = 'idle' | 'loading' | 'ready' | 'error'
 
-/** The wallet token currently charted (drives the on-chain trade overlay). */
-export interface ActiveWalletToken {
-  address: string
-  chain: EvmChain
-  symbol: string
-}
-
 interface WalletState {
   // imported wallet (persisted)
   address: string | null
@@ -21,7 +14,6 @@ interface WalletState {
   // transient
   status: WalletStatus
   error: string | null
-  activeToken: ActiveWalletToken | null
   trades: WalletTrade[]
   tradesFor: string | null // token address the trades belong to
   tradesLoading: boolean
@@ -29,7 +21,6 @@ interface WalletState {
   importWallet: (address: string) => Promise<void>
   clear: () => void
   toggleOverlay: () => void
-  setActiveToken: (t: ActiveWalletToken | null) => void
   setTrades: (tokenAddress: string | null, trades: WalletTrade[]) => void
   setTradesLoading: (loading: boolean) => void
 }
@@ -43,7 +34,6 @@ export const useWallet = create<WalletState>()(
       showOverlay: true,
       status: 'idle',
       error: null,
-      activeToken: null,
       trades: [],
       tradesFor: null,
       tradesLoading: false,
@@ -54,7 +44,7 @@ export const useWallet = create<WalletState>()(
           set({ status: 'error', error: 'Enter a valid 0x… wallet address' })
           return
         }
-        set({ status: 'loading', error: null, address, holdings: [], activeToken: null, trades: [], tradesFor: null })
+        set({ status: 'loading', error: null, address, holdings: [], trades: [], tradesFor: null })
 
         // Auto-detect: pull holdings on both chains. Track reachability separately so a
         // down explorer reads as "unreachable" — never as "this wallet has no tokens".
@@ -93,13 +83,11 @@ export const useWallet = create<WalletState>()(
           holdings: [],
           status: 'idle',
           error: null,
-          activeToken: null,
           trades: [],
           tradesFor: null,
         }),
 
       toggleOverlay: () => set((s) => ({ showOverlay: !s.showOverlay })),
-      setActiveToken: (activeToken) => set({ activeToken }),
       setTrades: (tradesFor, trades) => set({ trades, tradesFor }),
       setTradesLoading: (tradesLoading) => set({ tradesLoading }),
     }),
