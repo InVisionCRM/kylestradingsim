@@ -17,6 +17,17 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/ds/, ''),
       },
+      // Blockscout (server-side in dev too, mirroring the prod /api/blockscout function)
+      '/bs/pulsechain': {
+        target: 'https://api.scan.pulsechain.com',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/bs\/pulsechain/, '/api/v2'),
+      },
+      '/bs/ethereum': {
+        target: 'https://eth.blockscout.com',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/bs\/ethereum/, '/api/v2'),
+      },
     },
   },
 })

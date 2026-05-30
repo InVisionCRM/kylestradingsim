@@ -1,12 +1,14 @@
 import { getJson } from './client'
 
-// Blockscout v2 — the same public, CORS-enabled, keyless API the portfolio site uses.
-// Verified live against both instances (field names below are confirmed, not assumed).
+// Blockscout v2. PulseChain's instance blocks direct cross-origin browser calls,
+// so we reach Blockscout SERVER-SIDE — the same approach as the portfolio's
+// /api/portfolio routes: in production through the Vercel function api/blockscout.js,
+// in dev through the Vite proxy. Field shapes below are confirmed live.
 export type EvmChain = 'pulsechain' | 'ethereum'
 
-const BASE: Record<EvmChain, string> = {
-  pulsechain: 'https://api.scan.pulsechain.com/api/v2',
-  ethereum: 'https://eth.blockscout.com/api/v2',
+const DEV = import.meta.env.DEV
+function bsUrl(chain: EvmChain, path: string): string {
+  return DEV ? `/bs/${chain}${path}` : `/api/blockscout?chain=${chain}&path=${encodeURIComponent(path)}`
 }
 
 export const EVM_CHAINS: EvmChain[] = ['pulsechain', 'ethereum']
@@ -67,7 +69,7 @@ function toUnits(raw: string | undefined, decimals: number): number {
 
 /** ERC-20 holdings for a wallet, richest first. Single page (top ~50) — enough for a list. */
 export async function getTokenHoldings(chain: EvmChain, wallet: string): Promise<TokenHolding[]> {
-  const data = await getJson<Paged<RawHolding>>(`${BASE[chain]}/addresses/${wallet}/tokens?type=ERC-20`)
+  const data = await getJson<Paged<RawHolding>>(bsUrl(chain, `/addresses/${wallet}/tokens?type=ERC-20`))
   const out: TokenHolding[] = []
   for (const it of data.items ?? []) {
     const t = it.token ?? {}
@@ -98,13 +100,12 @@ const MAX_PAGES = 100
 
 /** Every ERC-20 transfer of one token in/out of a wallet — full history, paged. */
 export async function getTokenTransfers(chain: EvmChain, wallet: string, token: string): Promise<RawTransfer[]> {
-  const url = `${BASE[chain]}/addresses/${wallet}/token-transfers`
   const all: RawTransfer[] = []
   let query: Record<string, string> = { token, type: 'ERC-20' }
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const qs = new URLSearchParams(query).toString()
-    const data = await getJson<Paged<RawTransfer>>(`${url}?${qs}`)
+    const data = await getJson<Paged<RawTransfer>>(bsUrl(chain, `/addresses/${wallet}/token-transfers?${qs}`))
     all.push(...(data.items ?? []))
     const next = data.next_page_params
     if (!next) break
