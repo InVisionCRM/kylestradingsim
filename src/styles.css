@@ -123,6 +123,26 @@ input { font-family: var(--mono); }
 .chart-host { position: absolute; inset: 0; }
 .chart { position: absolute; inset: 0; }
 .ohlc { position: absolute; top: 12px; left: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; gap: 13px; z-index: 5; pointer-events: none; }
+.seg { display: flex; border: 1px solid var(--hair); border-radius: var(--r-sm); overflow: hidden; }
+.seg button { width: 34px; height: 28px; display: flex; align-items: center; justify-content: center; background: transparent; border: 0; color: var(--muted); cursor: pointer; }
+.seg button:hover { background: var(--panel2); color: var(--text); }
+.seg button.on { background: var(--panel2); color: var(--accent); }
+.dd { position: relative; margin-left: auto; }
+.ddbtn { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel2); color: var(--text); font-size: 12px; font-weight: 500; }
+.ddbtn.on { border-color: var(--accent); color: var(--accent); }
+.ddmenu { position: absolute; top: 34px; right: 0; z-index: 40; background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r); padding: 5px; min-width: 210px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+.ddrow { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 9px; background: transparent; border: 0; border-radius: var(--r-sm); color: var(--text); font-size: 12px; text-align: left; cursor: pointer; }
+.ddrow:hover { background: var(--panel2); }
+.chk { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--hair); flex: none; }
+.chk.on { background: var(--accent); border-color: var(--accent); }
+.statusbar { display: flex; align-items: center; gap: 6px; height: 32px; padding: 0 10px; border-top: 1px solid var(--hair); background: var(--panel); flex: none; }
+.statusbar .sb-spacer { flex: 1; }
+.clock { color: var(--muted); font-size: 12px; }
+.sb { font-family: var(--mono); font-size: 12px; color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: var(--r-sm); padding: 4px 8px; cursor: pointer; }
+.sb:hover { color: var(--text); border-color: var(--hair); }
+.sb.on { color: var(--accent); border-color: var(--accent); }
+.sb.ic { display: flex; align-items: center; justify-content: center; padding: 4px 7px; }
+.col:fullscreen { background: var(--bg); }
 .ohlc b { color: var(--text); font-weight: 500; }
 .chart-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 12px; z-index: 6; }
 

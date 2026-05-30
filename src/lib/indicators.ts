@@ -26,6 +26,40 @@ export function sma(values: number[], period: number): (number | null)[] {
   return out
 }
 
+export interface Bands {
+  upper: (number | null)[]
+  middle: (number | null)[]
+  lower: (number | null)[]
+}
+
+export function bollinger(values: number[], period = 20, mult = 2): Bands {
+  const middle = sma(values, period)
+  const upper: (number | null)[] = new Array(values.length).fill(null)
+  const lower: (number | null)[] = new Array(values.length).fill(null)
+  for (let i = 0; i < values.length; i++) {
+    const m = middle[i]
+    if (m == null) continue
+    let sq = 0
+    for (let j = i - period + 1; j <= i; j++) sq += (values[j] - m) ** 2
+    const sd = Math.sqrt(sq / period)
+    upper[i] = m + mult * sd
+    lower[i] = m - mult * sd
+  }
+  return { upper, middle, lower }
+}
+
+/** Cumulative VWAP over the loaded window (typical price weighted by volume). */
+export function vwap(candles: { high: number; low: number; close: number; volume: number }[]): (number | null)[] {
+  let pv = 0
+  let vv = 0
+  return candles.map((c) => {
+    const tp = (c.high + c.low + c.close) / 3
+    pv += tp * c.volume
+    vv += c.volume
+    return vv > 0 ? pv / vv : null
+  })
+}
+
 export function rsi(values: number[], period = 14): (number | null)[] {
   const out: (number | null)[] = new Array(values.length).fill(null)
   if (values.length <= period) return out

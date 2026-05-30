@@ -37,3 +37,18 @@ export const IconGlobe = ({ size }: P) => (
 export const IconLink = ({ size }: P) => (
   <svg {...base(size)}><path d="M10 13a5 5 0 007 0l3-3a5 5 0 00-7-7l-1 1" /><path d="M14 11a5 5 0 00-7 0l-3 3a5 5 0 007 7l1-1" /></svg>
 )
+export const IconCandles = ({ size }: P) => (
+  <svg {...base(size)}><rect x="6" y="7" width="3.5" height="10" rx="1" /><path d="M7.7 3v4M7.7 17v4" /><rect x="14.5" y="9" width="3.5" height="7" rx="1" /><path d="M16.2 5v4M16.2 16v3" /></svg>
+)
+export const IconLineChart = ({ size }: P) => (
+  <svg {...base(size)}><path d="M3 16l5-6 4 3 6-8 3 4" /></svg>
+)
+export const IconFullscreen = ({ size }: P) => (
+  <svg {...base(size)}><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg>
+)
+export const IconCamera = ({ size }: P) => (
+  <svg {...base(size)}><path d="M4 8h3l2-2h6l2 2h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+)
+export const IconChevron = ({ size }: P) => (
+  <svg {...base(size)}><path d="M6 9l6 6 6-6" /></svg>
+)
