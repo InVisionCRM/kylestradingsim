@@ -1,17 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 
-export type IndicatorKey = 'ema' | 'sma' | 'bb' | 'vwap' | 'rsi' | 'volMa'
+export type IndicatorKey = 'ema' | 'ma' | 'boll' | 'macd' | 'rsi' | 'kdj' | 'vol'
 export type ChartType = 'candles' | 'line'
 export type ScaleMode = 'normal' | 'log' | 'percent'
 
 interface ChartPrefsState {
   ema: boolean
-  sma: boolean
-  bb: boolean
-  vwap: boolean
+  ma: boolean
+  boll: boolean
+  macd: boolean
   rsi: boolean
-  volMa: boolean
+  kdj: boolean
+  vol: boolean
   chartType: ChartType
   scaleMode: ScaleMode
   toggle: (k: IndicatorKey) => void
@@ -23,18 +24,19 @@ export const useChartPrefs = create<ChartPrefsState>()(
   persist(
     (set) => ({
       ema: false,
-      sma: false,
-      bb: false,
-      vwap: false,
+      ma: false,
+      boll: false,
+      macd: false,
       rsi: false,
-      volMa: false,
+      kdj: false,
+      vol: true,
       chartType: 'candles',
       scaleMode: 'normal',
       toggle: (k) => set((s) => ({ [k]: !s[k] }) as Partial<ChartPrefsState>),
       setChartType: (chartType) => set({ chartType }),
-      // Log and % are mutually exclusive scale modes; toggling one off returns to normal.
+      // Log and % are mutually exclusive; toggling the active one returns to normal.
       setScaleMode: (m) => set((s) => ({ scaleMode: s.scaleMode === m ? 'normal' : m })),
     }),
-    { name: 'paperdex.chartprefs.v2' },
+    { name: 'paperdex.chartprefs.v3' },
   ),
 )

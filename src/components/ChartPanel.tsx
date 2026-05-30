@@ -3,21 +3,35 @@ import { useMarket } from '../state/useMarket'
 import { useMarketData } from '../state/useMarketData'
 import { useSim } from '../state/useSim'
 import { useChartPrefs, type IndicatorKey } from '../state/useChartPrefs'
-import { useVisibleCandles, useActiveTokenKey } from '../hooks/useDerived'
-import { Chart, type ChartMarker, type ChartHandle } from '../chart/Chart'
+import { useVisibleCandles } from '../hooks/useDerived'
+import { Chart, type ChartHandle } from '../chart/Chart'
 import { ReplayControls } from './ReplayControls'
-import { formatQty } from '../lib/format'
-import { IconCandles, IconLineChart, IconFullscreen, IconCamera, IconChevron } from './icons'
+import {
+  IconCandles, IconLineChart, IconFullscreen, IconCamera, IconChevron,
+  IconCursor, IconTrendline, IconHLine, IconRay, IconRect, IconTrash,
+} from './icons'
 import type { Timeframe } from '../types'
+import type { JSX } from 'react'
 
 const TFS: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1d']
 const INDICATORS: { key: IndicatorKey; label: string }[] = [
-  { key: 'ema', label: 'EMA (9, 21)' },
-  { key: 'sma', label: 'SMA (50)' },
-  { key: 'bb', label: 'Bollinger Bands (20, 2)' },
-  { key: 'vwap', label: 'VWAP' },
-  { key: 'rsi', label: 'RSI (14)' },
-  { key: 'volMa', label: 'Volume MA (20)' },
+  { key: 'ema', label: 'EMA' },
+  { key: 'ma', label: 'MA' },
+  { key: 'boll', label: 'Bollinger Bands' },
+  { key: 'macd', label: 'MACD' },
+  { key: 'rsi', label: 'RSI' },
+  { key: 'kdj', label: 'KDJ' },
+  { key: 'vol', label: 'Volume' },
+]
+// Left-rail drawing tools → KLineChart built-in overlay names
+const TOOLS: { id: string; title: string; overlay: string | null; icon: JSX.Element }[] = [
+  { id: 'cursor', title: 'Cursor', overlay: null, icon: <IconCursor /> },
+  { id: 'segment', title: 'Trend line', overlay: 'segment', icon: <IconTrendline /> },
+  { id: 'horizontalStraightLine', title: 'Horizontal line', overlay: 'horizontalStraightLine', icon: <IconHLine /> },
+  { id: 'rayLine', title: 'Ray', overlay: 'rayLine', icon: <IconRay /> },
+  { id: 'rect', title: 'Rectangle', overlay: 'rect', icon: <IconRect /> },
+  { id: 'fibonacciLine', title: 'Fibonacci retracement', overlay: 'fibonacciLine', icon: <span>Fib</span> },
+  { id: 'priceLine', title: 'Price line', overlay: 'priceLine', icon: <span>—$</span> },
 ]
 
 function Clock() {
@@ -66,53 +80,38 @@ export function ChartPanel() {
   const loading = useMarketData((s) => s.loading)
   const error = useMarketData((s) => s.error)
   const candles = useVisibleCandles()
-  const activeKey = useActiveTokenKey()
-  const account = useSim((s) => s.accounts[s.mode])
   const chartType = useChartPrefs((s) => s.chartType)
   const scaleMode = useChartPrefs((s) => s.scaleMode)
   const prefs = useChartPrefs()
 
   const colRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<ChartHandle>(null)
-  const [isFs, setIsFs] = useState(false)
+  const [tool, setTool] = useState('cursor')
 
   const indicators = useMemo(
-    () => ({ ema: prefs.ema, sma: prefs.sma, bb: prefs.bb, vwap: prefs.vwap, rsi: prefs.rsi, volMa: prefs.volMa }),
-    [prefs.ema, prefs.sma, prefs.bb, prefs.vwap, prefs.rsi, prefs.volMa],
+    () => ({ ema: prefs.ema, ma: prefs.ma, boll: prefs.boll, macd: prefs.macd, rsi: prefs.rsi, kdj: prefs.kdj, vol: prefs.vol }),
+    [prefs.ema, prefs.ma, prefs.boll, prefs.macd, prefs.rsi, prefs.kdj, prefs.vol],
   )
 
-  const markers: ChartMarker[] = useMemo(() => {
-    if (!activeKey) return []
-    return account.trades
-      .filter((t) => t.tokenKey === activeKey)
-      .map((t) => ({ time: t.ts, side: t.side, text: `${t.side === 'buy' ? 'B' : 'S'} ${formatQty(t.qtyToken)}` }))
-  }, [account.trades, activeKey])
-
-  const avgEntry = activeKey ? account.positions[activeKey]?.avgEntryUsd ?? null : null
-
-  useEffect(() => {
-    const onFs = () => setIsFs(!!document.fullscreenElement)
-    document.addEventListener('fullscreenchange', onFs)
-    return () => document.removeEventListener('fullscreenchange', onFs)
-  }, [])
-
+  const pickTool = (id: string, overlay: string | null) => {
+    setTool(id)
+    if (overlay) chartRef.current?.startDrawing(overlay)
+  }
+  const clearDrawings = () => {
+    chartRef.current?.clearDrawings()
+    setTool('cursor')
+  }
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen()
     else colRef.current?.requestFullscreen?.()
   }
-
   const savePng = () => {
-    const canvas = chartRef.current?.takeScreenshot()
-    if (!canvas) return
-    canvas.toBlob((blob) => {
-      if (!blob) return
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `paperdex-chart-${Date.now()}.png`
-      a.click()
-      URL.revokeObjectURL(url)
-    })
+    const url = chartRef.current?.screenshot()
+    if (!url) return
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `paperdex-chart-${Date.now()}.png`
+    a.click()
   }
 
   return (
@@ -125,18 +124,10 @@ export function ChartPanel() {
         ))}
         <span className="vline" />
         <div className="seg">
-          <button
-            className={chartType === 'candles' ? 'on' : ''}
-            title="Candlesticks"
-            onClick={() => useChartPrefs.getState().setChartType('candles')}
-          >
+          <button className={chartType === 'candles' ? 'on' : ''} title="Candlesticks" onClick={() => useChartPrefs.getState().setChartType('candles')}>
             <IconCandles size={16} />
           </button>
-          <button
-            className={chartType === 'line' ? 'on' : ''}
-            title="Line"
-            onClick={() => useChartPrefs.getState().setChartType('line')}
-          >
+          <button className={chartType === 'line' ? 'on' : ''} title="Line" onClick={() => useChartPrefs.getState().setChartType('line')}>
             <IconLineChart size={16} />
           </button>
         </div>
@@ -145,19 +136,24 @@ export function ChartPanel() {
         </div>
       </div>
 
-      <div className="chartwrap">
-        <Chart
-          ref={chartRef}
-          candles={candles}
-          markers={markers}
-          avgEntry={avgEntry}
-          chartType={chartType}
-          scaleMode={scaleMode}
-          indicators={indicators}
-        />
-        {loading && <div className="chart-overlay">Loading chart…</div>}
-        {!loading && error && <div className="chart-overlay">{error}</div>}
-        {!loading && !error && candles.length === 0 && <div className="chart-overlay">No chart data for this token.</div>}
+      <div className="chartrow">
+        <div className="rail">
+          {TOOLS.map((t) => (
+            <button key={t.id} className={`tool ${tool === t.id ? 'on' : ''}`} title={t.title} onClick={() => pickTool(t.id, t.overlay)}>
+              {t.icon}
+            </button>
+          ))}
+          <span className="sep" />
+          <button className="tool" title="Delete all drawings" onClick={clearDrawings}>
+            <IconTrash />
+          </button>
+        </div>
+        <div className="chartwrap">
+          <Chart ref={chartRef} candles={candles} chartType={chartType} scaleMode={scaleMode} indicators={indicators} />
+          {loading && <div className="chart-overlay">Loading chart…</div>}
+          {!loading && error && <div className="chart-overlay">{error}</div>}
+          {!loading && !error && candles.length === 0 && <div className="chart-overlay">No chart data for this token.</div>}
+        </div>
       </div>
 
       <div className="statusbar">
@@ -169,7 +165,7 @@ export function ChartPanel() {
         <button className={`sb ${scaleMode === 'percent' ? 'on' : ''}`} title="Percent scale" onClick={() => useChartPrefs.getState().setScaleMode('percent')}>
           %
         </button>
-        <button className={`sb ic ${isFs ? 'on' : ''}`} title="Fullscreen" onClick={toggleFullscreen}>
+        <button className="sb ic" title="Fullscreen" onClick={toggleFullscreen}>
           <IconFullscreen size={15} />
         </button>
         <button className="sb ic" title="Save chart as PNG" onClick={savePng}>

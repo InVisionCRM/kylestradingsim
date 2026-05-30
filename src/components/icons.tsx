@@ -52,3 +52,21 @@ export const IconCamera = ({ size }: P) => (
 export const IconChevron = ({ size }: P) => (
   <svg {...base(size)}><path d="M6 9l6 6 6-6" /></svg>
 )
+export const IconCursor = ({ size }: P) => (
+  <svg width={size ?? 18} height={size ?? 18} viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l15 9-6 1.5L11 20z" /></svg>
+)
+export const IconTrendline = ({ size }: P) => (
+  <svg {...base(size)}><path d="M4 20L20 4" /><rect x="2" y="18" width="4" height="4" rx="1" fill="currentColor" /><rect x="18" y="2" width="4" height="4" rx="1" fill="currentColor" /></svg>
+)
+export const IconHLine = ({ size }: P) => (
+  <svg {...base(size)}><path d="M3 12h18" /></svg>
+)
+export const IconRay = ({ size }: P) => (
+  <svg {...base(size)}><path d="M3 18L21 6M21 6h-5M21 6v5" /></svg>
+)
+export const IconRect = ({ size }: P) => (
+  <svg {...base(size)}><rect x="4" y="6" width="16" height="12" rx="1" /></svg>
+)
+export const IconTrash = ({ size }: P) => (
+  <svg {...base(size)}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
+)

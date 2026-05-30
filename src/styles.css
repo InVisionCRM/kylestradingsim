@@ -143,6 +143,14 @@ input { font-family: var(--mono); }
 .sb.on { color: var(--accent); border-color: var(--accent); }
 .sb.ic { display: flex; align-items: center; justify-content: center; padding: 4px 7px; }
 .col:fullscreen { background: var(--bg); }
+.chartrow { display: flex; flex: 1; min-height: 0; }
+.rail { width: 46px; flex: none; border-right: 1px solid var(--hair); background: var(--panel); display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; }
+.tool { width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 8px; border: 1px solid transparent; color: var(--muted); background: transparent; cursor: pointer; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.tool:hover { background: var(--panel2); color: var(--text); }
+.tool.on { background: rgba(230, 255, 58, 0.14); border-color: var(--accent); color: var(--accent); }
+.tool svg { width: 18px; height: 18px; }
+.rail .sep { width: 24px; height: 1px; background: var(--hair); margin: 4px 0; }
+@media (max-width: 1040px) { .rail { width: 40px; } }
 .ohlc b { color: var(--text); font-weight: 500; }
 .chart-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 12px; z-index: 6; }
 
