@@ -1,12 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMarket } from '../state/useMarket'
 import { useSim } from '../state/useSim'
+import { useOrder } from '../state/useOrder'
 import { useMarketData } from '../state/useMarketData'
 import { useReplay } from '../state/useReplay'
 import { useCurrentPrice, useActiveTokenKey } from '../hooks/useDerived'
 import { SimError } from '../sim/errors'
 import { formatQty, formatPrice, formatUsd } from '../lib/format'
-import type { Side } from '../types'
 
 function nowTs(mode: string): number {
   if (mode === 'replay') {
@@ -22,11 +22,16 @@ export function OrderPanel() {
   const settings = useSim((s) => s.settings)
   const price = useCurrentPrice()
   const activeKey = useActiveTokenKey()
-
-  const [side, setSide] = useState<Side>('buy')
-  const [unit, setUnit] = useState<'USD' | 'TOKEN'>('USD')
+  const side = useOrder((s) => s.side)
+  const unit = useOrder((s) => s.unit)
+  const focusTick = useOrder((s) => s.focusTick)
   const [amount, setAmount] = useState('')
   const [err, setErr] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (focusTick > 0) inputRef.current?.focus()
+  }, [focusTick])
 
   const position = activeKey ? account.positions[activeKey] : undefined
   const sym = pair?.baseToken.symbol ?? ''
@@ -63,10 +68,10 @@ export function OrderPanel() {
   return (
     <div className="order">
       <div className="bs">
-        <button className={`buy ${side === 'buy' ? 'on' : ''}`} onClick={() => setSide('buy')}>
+        <button className={`buy ${side === 'buy' ? 'on' : ''}`} onClick={() => useOrder.getState().setSide('buy')}>
           BUY
         </button>
-        <button className={`sell ${side === 'sell' ? 'on' : ''}`} onClick={() => setSide('sell')}>
+        <button className={`sell ${side === 'sell' ? 'on' : ''}`} onClick={() => useOrder.getState().setSide('sell')}>
           SELL
         </button>
       </div>
@@ -75,19 +80,21 @@ export function OrderPanel() {
         <div className="l">
           <span>AMOUNT</span>
           <span>
-            {side === 'buy'
-              ? `Cash ${formatUsd(account.cashUsd)}`
-              : `Holding ${formatQty(position?.qty ?? 0)} ${sym}`}
+            {side === 'buy' ? `Cash ${formatUsd(account.cashUsd)}` : `Holding ${formatQty(position?.qty ?? 0)} ${sym}`}
           </span>
         </div>
         <div className="input">
           <input
+            ref={inputRef}
             inputMode="decimal"
             placeholder="0.00"
             value={amount}
             onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !disabled) submit()
+            }}
           />
-          <button className="cur" onClick={() => setUnit((u) => (u === 'USD' ? 'TOKEN' : 'USD'))}>
+          <button className="cur" onClick={() => useOrder.getState().toggleUnit()}>
             {unit === 'USD' ? 'USD' : sym || 'TOKEN'} ⇄
           </button>
         </div>

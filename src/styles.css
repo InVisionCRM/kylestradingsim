@@ -114,8 +114,13 @@ input { font-family: var(--mono); }
 .tf { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 5px 9px; border-radius: var(--r-sm); border: 0; background: transparent; }
 .tf:hover { background: var(--panel2); color: var(--text); }
 .tf.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
-.tools { margin-left: auto; display: flex; gap: 6px; color: var(--faint); }
+.tools { margin-left: auto; display: flex; align-items: center; gap: 5px; color: var(--faint); }
+.ind { font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; color: var(--muted); background: transparent; border: 1px solid var(--hair); border-radius: var(--r-sm); padding: 4px 7px; }
+.ind:hover { border-color: var(--muted); color: var(--text); }
+.ind.on { border-color: var(--accent); color: var(--accent); }
+.vline { width: 1px; height: 16px; background: var(--hair); margin: 0 3px; }
 .chartwrap { position: relative; flex: 1; min-height: 0; }
+.chart-host { position: absolute; inset: 0; }
 .chart { position: absolute; inset: 0; }
 .ohlc { position: absolute; top: 12px; left: 14px; font-family: var(--mono); font-size: 11px; color: var(--muted); display: flex; gap: 13px; z-index: 5; pointer-events: none; }
 .ohlc b { color: var(--text); font-weight: 500; }
