@@ -21,6 +21,11 @@ interface OhlcvResponse {
 
 const cache = new Map<string, { at: number; data: Candle[] }>()
 
+// GeckoTerminal returns at most 1000 bars per call. Page backwards this many times
+// (stopping early when history runs out) so the chart shows deep history without
+// hammering the rate-limited API.
+const MAX_OHLCV_PAGES = 5
+
 /**
  * Historical OHLCV candles from GeckoTerminal, normalized to ascending,
  * de-duplicated `Candle[]` ready for Lightweight Charts.
@@ -35,29 +40,37 @@ export async function fetchOhlcv(chainId: string, poolAddress: string, tf: Timef
   const hit = cache.get(key)
   if (hit && Date.now() - hit.at < ttl) return hit.data
 
-  const path = `/networks/${network}/pools/${poolAddress}/ohlcv/${conf.path}?aggregate=${conf.aggregate}&limit=300&currency=usd&token=base`
-  const json = await gtGet<OhlcvResponse>(path)
-  const list = json?.data?.attributes?.ohlcv_list ?? []
+  // One call = up to 1000 bars; page backwards with before_timestamp for deep history.
+  const base = `/networks/${network}/pools/${poolAddress}/ohlcv/${conf.path}?aggregate=${conf.aggregate}&limit=1000&currency=usd&token=base`
+  const byTime = new Map<number, Candle>()
+  let before: number | null = null
+  let oldest = Infinity
 
-  const candles: Candle[] = list
-    .map((r) => ({
-      time: Number(r[0]),
-      open: Number(r[1]),
-      high: Number(r[2]),
-      low: Number(r[3]),
-      close: Number(r[4]),
-      volume: Number(r[5]),
-    }))
-    .filter((c) => isFinite(c.time) && isFinite(c.close) && c.close > 0)
-    .sort((a, b) => a.time - b.time)
+  for (let page = 0; page < MAX_OHLCV_PAGES; page++) {
+    const path = before == null ? base : `${base}&before_timestamp=${before}`
+    const json = await gtGet<OhlcvResponse>(path)
+    const list = json?.data?.attributes?.ohlcv_list ?? []
+    if (!list.length) break
 
-  // Strictly ascending, unique times (Lightweight Charts requirement).
-  const out: Candle[] = []
-  for (const c of candles) {
-    if (!out.length || out[out.length - 1].time !== c.time) out.push(c)
-    else out[out.length - 1] = c
+    let pageOldest = Infinity
+    for (const r of list) {
+      const time = Number(r[0])
+      const close = Number(r[4])
+      if (!isFinite(time) || !isFinite(close) || close <= 0) continue
+      if (!byTime.has(time)) {
+        byTime.set(time, { time, open: Number(r[1]), high: Number(r[2]), low: Number(r[3]), close, volume: Number(r[5]) })
+      }
+      if (time < pageOldest) pageOldest = time
+    }
+
+    // a short page means we've hit the start of available history; no progress also stops us
+    if (list.length < 1000 || !isFinite(pageOldest) || pageOldest >= oldest) break
+    oldest = pageOldest
+    before = pageOldest
   }
 
+  // ascending, unique times (chart requirement)
+  const out = [...byTime.values()].sort((a, b) => a.time - b.time)
   cache.set(key, { at: Date.now(), data: out })
   return out
 }
