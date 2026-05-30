@@ -26,6 +26,7 @@ interface Props {
   indicators: Record<string, boolean>
   avgEntry: number | null
   markers: ChartMarker[]
+  tokenKey: string
 }
 
 // overlay groups so "Clear" only removes user drawings, never markers / avg line
@@ -75,21 +76,47 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
     },
     separator: { color: axis },
     indicator: { tooltip: { text: { color: text } } },
+    overlay: {
+      // accent handles normally, subtle white highlight when hovered / selected
+      point: {
+        color: '#e6ff3a',
+        borderColor: '#101113',
+        borderSize: 1,
+        radius: 4,
+        activeColor: '#ffffff',
+        activeBorderColor: '#ffffff',
+        activeBorderSize: 2,
+        activeRadius: 5,
+      },
+      line: { color: '#e6ff3a', size: 1 },
+    },
   }
 }
 
 export const Chart = forwardRef<ChartHandle, Props>(function Chart(
-  { candles, chartType, scaleMode, indicators, avgEntry, markers },
+  { candles, chartType, scaleMode, indicators, avgEntry, markers, tokenKey },
   ref,
 ) {
   const elRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<KLineChartApi | null>(null)
   const candlesRef = useRef<Candle[]>([])
   const paneIds = useRef<Record<string, string>>({})
+  const selectedRef = useRef<string | null>(null)
 
   useImperativeHandle(ref, () => ({
     startDrawing: (name) => {
-      chartRef.current?.createOverlay({ name, groupId: G_USER })
+      chartRef.current?.createOverlay({
+        name,
+        groupId: G_USER,
+        onSelected: (e) => {
+          selectedRef.current = e.overlay.id
+          return false
+        },
+        onDeselected: () => {
+          selectedRef.current = null
+          return false
+        },
+      })
     },
     clearDrawings: () => {
       chartRef.current?.removeOverlay({ groupId: G_USER })
@@ -188,6 +215,27 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markers, hasData])
+
+  // delete the selected drawing with Delete / Backspace
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const t = e.target as HTMLElement | null
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return
+      if ((e.key === 'Delete' || e.key === 'Backspace') && selectedRef.current) {
+        chartRef.current?.removeOverlay({ id: selectedRef.current })
+        selectedRef.current = null
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // drawings persist across timeframe changes; clear them only when the token changes
+  useEffect(() => {
+    chartRef.current?.removeOverlay({ groupId: G_USER })
+    selectedRef.current = null
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tokenKey])
 
   return (
     <div className="chart-host">

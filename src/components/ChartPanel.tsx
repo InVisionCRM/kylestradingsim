@@ -158,7 +158,7 @@ export function ChartPanel() {
           </button>
         </div>
         <div className="chartwrap">
-          <Chart ref={chartRef} candles={candles} chartType={chartType} scaleMode={scaleMode} indicators={indicators} avgEntry={avgEntry} markers={markers} />
+          <Chart ref={chartRef} candles={candles} chartType={chartType} scaleMode={scaleMode} indicators={indicators} avgEntry={avgEntry} markers={markers} tokenKey={activeKey ?? ''} />
           {loading && <div className="chart-overlay">Loading chart…</div>}
           {!loading && error && <div className="chart-overlay">{error}</div>}
           {!loading && !error && candles.length === 0 && <div className="chart-overlay">No chart data for this token.</div>}
