@@ -32,6 +32,7 @@ interface Props {
   indicators: Record<string, boolean>
   avgEntry: number | null
   markers: ChartMarker[]
+  walletMarkers: ChartMarker[]
   tokenKey: string
   orders: OrderLine[]
   onOrderMove: (id: string, price: number) => void
@@ -42,6 +43,7 @@ const G_USER = 'pdx-user'
 const G_POS = 'pdx-pos'
 const G_TRADES = 'pdx-trades'
 const G_ORDERS = 'pdx-orders'
+const G_WALLET = 'pdx-wallet'
 
 const CANDLE_PANE = 'candle_pane'
 
@@ -103,7 +105,7 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
 }
 
 export const Chart = forwardRef<ChartHandle, Props>(function Chart(
-  { candles, chartType, scaleMode, indicators, avgEntry, markers, tokenKey, orders, onOrderMove },
+  { candles, chartType, scaleMode, indicators, avgEntry, markers, walletMarkers, tokenKey, orders, onOrderMove },
   ref,
 ) {
   const elRef = useRef<HTMLDivElement>(null)
@@ -225,6 +227,25 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [markers, hasData])
+
+  // imported-wallet on-chain trades — own group, distinct cyan/amber so they read
+  // separately from your own (green/red) paper-trade markers
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart || !hasData) return
+    chart.removeOverlay({ groupId: G_WALLET })
+    walletMarkers.forEach((m) => {
+      chart.createOverlay({
+        name: 'simpleAnnotation',
+        groupId: G_WALLET,
+        lock: true,
+        points: [{ timestamp: m.time * 1000, value: m.price }],
+        extendData: m.text,
+        styles: { text: { color: m.side === 'buy' ? '#22d3ee' : '#f59e0b', size: 12, weight: 'bold' } },
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletMarkers, hasData])
 
   // delete the selected drawing with Delete / Backspace
   useEffect(() => {

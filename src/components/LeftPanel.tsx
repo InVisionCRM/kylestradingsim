@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useWatchlist } from '../state/useWatchlist'
 import { useMarket } from '../state/useMarket'
+import { useWallet } from '../state/useWallet'
 import { getPair } from '../api/dexscreener'
 import { ensureLogo } from '../lib/logos'
 import { usePrices } from '../state/usePrices'
 import type { Pair, WatchItem } from '../types'
 import { formatPrice, formatPct, signClass } from '../lib/format'
 import { TokenIcon } from './TokenIcon'
+import { WalletImport } from './WalletImport'
 
 function useWatchPrices(items: WatchItem[]): Record<string, Pair> {
   const [map, setMap] = useState<Record<string, Pair>>({})
@@ -46,11 +48,15 @@ export function LeftPanel() {
 
   const select = async (chainId: string, pairAddress: string, known?: Pair) => {
     const p = known ?? (await getPair(chainId, pairAddress).catch(() => null))
-    if (p) useMarket.getState().setActivePair(p)
+    if (p) {
+      useWallet.getState().setActiveToken(null) // a watchlist pick isn't a wallet token → hide the overlay
+      useMarket.getState().setActivePair(p)
+    }
   }
 
   return (
     <div className="col scroll">
+      <WalletImport />
       <div className="sechead">WATCHLIST</div>
       {items.length === 0 && <div className="center-msg" style={{ height: 80 }}>Loading markets…</div>}
       {items.map((it) => {

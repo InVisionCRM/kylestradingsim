@@ -309,3 +309,30 @@ td.lab { font-family: var(--font); font-weight: 600; }
   .chartwrap { height: 420px; flex: none; }
   .search { display: none; }
 }
+
+/* ── Wallet import + on-chain holdings ─────────────────────── */
+.wallet { border-bottom: 1px solid var(--hair); padding-bottom: 6px; }
+.wctl { display: flex; align-items: center; gap: 6px; }
+.wctl .wovl { background: var(--panel2); border: 1px solid var(--hair); color: var(--faint); font-size: 10px; letter-spacing: 0.04em; border-radius: var(--r-sm); padding: 2px 7px; }
+.wctl .wovl.on { color: #22d3ee; border-color: rgba(34, 211, 238, 0.5); }
+.wctl .wovl:hover { color: var(--text); }
+.wctl .rm { width: 18px; height: 18px; border-radius: 4px; background: var(--panel2); border: 1px solid var(--hair); color: var(--faint); display: flex; align-items: center; justify-content: center; font-size: 13px; line-height: 1; }
+.wctl .rm:hover { color: var(--down); border-color: var(--down); }
+.wimport { padding: 0 14px 8px; }
+.winput { display: flex; gap: 6px; }
+.winput input { flex: 1; min-width: 0; background: var(--bg); border: 1px solid var(--hair); border-radius: var(--r-sm); color: var(--text); font-size: 11px; padding: 7px 8px; }
+.winput input:focus { outline: none; border-color: var(--accent); }
+.wgo { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: var(--r-sm); font-size: 11px; font-weight: 600; padding: 0 12px; }
+.wgo:disabled { opacity: 0.45; cursor: default; }
+.wnote { padding: 6px 14px 0; font-size: 10px; color: var(--muted); }
+.wnote.dim { color: var(--faint); }
+.wnote.err { color: var(--down); }
+.wmeta { display: flex; align-items: center; gap: 8px; padding: 2px 14px 6px; }
+.waddr { font-family: var(--mono); font-size: 11px; color: var(--text); }
+.wchain { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 4px; border: 1px solid var(--hair); color: var(--muted); }
+.wchain.pulsechain { color: #c084fc; border-color: rgba(192, 132, 252, 0.4); }
+.wchain.ethereum { color: #93b4ff; border-color: rgba(147, 180, 255, 0.4); }
+.wcount { margin-left: auto; font-size: 10px; color: var(--faint); }
+.wlist { max-height: 240px; overflow-y: auto; }
+.wlist .row .c.dim { color: var(--faint); }
+.wspin { position: absolute; right: 10px; color: var(--accent); font-size: 12px; }

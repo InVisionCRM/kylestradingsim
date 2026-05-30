@@ -8,6 +8,8 @@ import { useVisibleCandles, useActiveTokenKey } from '../hooks/useDerived'
 import { Chart, type ChartHandle, type ChartMarker, type OrderLine } from '../chart/Chart'
 import { ReplayControls } from './ReplayControls'
 import { useOrders } from '../state/useOrders'
+import { useWallet } from '../state/useWallet'
+import { priceAtTime } from '../lib/walletTrades'
 import { formatQty } from '../lib/format'
 import {
   IconCandles, IconLineChart, IconFullscreen, IconCamera, IconChevron,
@@ -109,6 +111,24 @@ export function ChartPanel() {
     [ordersAll, activeKey],
   )
 
+  // imported-wallet on-chain trades, priced approximately at each candle's close (live only)
+  const rawCandles = useMarketData((s) => s.candles)
+  const walletShow = useWallet((s) => s.showOverlay)
+  const walletActive = useWallet((s) => s.activeToken)
+  const walletTrades = useWallet((s) => s.trades)
+  const walletTradesFor = useWallet((s) => s.tradesFor)
+  const walletMarkers: ChartMarker[] = useMemo(() => {
+    if (mode !== 'live' || !walletShow || !walletActive || walletTradesFor !== walletActive.address) return []
+    if (!rawCandles.length) return []
+    const out: ChartMarker[] = []
+    for (const t of walletTrades) {
+      const price = priceAtTime(rawCandles, t.ts)
+      if (price == null || !(price > 0)) continue
+      out.push({ time: t.ts, price, side: t.side, text: `${t.side === 'buy' ? '⊕ IN' : '⊖ OUT'} ${formatQty(t.amount)}` })
+    }
+    return out
+  }, [mode, walletShow, walletActive, walletTrades, walletTradesFor, rawCandles])
+
   const pickTool = (id: string, overlay: string | null) => {
     setTool(id)
     if (overlay) chartRef.current?.startDrawing(overlay)
@@ -173,6 +193,7 @@ export function ChartPanel() {
             indicators={indicators}
             avgEntry={avgEntry}
             markers={markers}
+            walletMarkers={walletMarkers}
             tokenKey={activeKey ?? ''}
             orders={orderLines}
             onOrderMove={(id, p) => useOrders.getState().updatePrice(mode, id, p)}

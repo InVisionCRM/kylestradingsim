@@ -2,6 +2,7 @@ import { useBootstrap } from './hooks/useBootstrap'
 import { useCandlesLoader, useLivePriceLoader, useReplayClock, usePositionPricesLoader } from './hooks/useDataLoaders'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useOrderEngine } from './hooks/useOrderEngine'
+import { useWalletTrades } from './hooks/useWalletTrades'
 import { TopBar } from './components/TopBar'
 import { LeftPanel } from './components/LeftPanel'
 import { ChartPanel } from './components/ChartPanel'
@@ -17,6 +18,7 @@ export function App() {
   useReplayClock()
   useKeyboardShortcuts()
   useOrderEngine()
+  useWalletTrades()
 
   return (
     <div className="app">
