@@ -5,3 +5,7 @@ dist-ssr
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+
+# vite temp config compiles
+vite.config.ts.timestamp-*.mjs
+dist2
