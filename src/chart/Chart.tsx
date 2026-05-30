@@ -41,8 +41,8 @@ function toKLine(cs: Candle[]): KLineData[] {
 }
 
 function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<Styles> {
-  const up = '#4ade80', down = '#f87171', nochg = '#9ca1a9'
-  const grid = '#1c1d21', axis = '#2a2c30', tick = '#6a6f77', text = '#eceef0', cross = '#3a3c40'
+  const up = '#2ee6a6', down = '#f87171', nochg = '#8fa3be'
+  const grid = '#13233c', axis = '#21385a', tick = '#7e90a8', text = '#eef3fa', cross = '#4a5f82'
   return {
     grid: { horizontal: { color: grid }, vertical: { color: grid } },
     candle: {
@@ -53,11 +53,11 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
         upWickColor: up, downWickColor: down, noChangeWickColor: nochg,
       },
       area: {
-        lineColor: '#e6e9ee',
+        lineColor: '#9fb2ff',
         lineSize: 2,
         backgroundColor: [
-          { offset: 0, color: 'rgba(230,233,238,0.12)' },
-          { offset: 1, color: 'rgba(230,233,238,0)' },
+          { offset: 0, color: 'rgba(99,102,241,0.18)' },
+          { offset: 1, color: 'rgba(99,102,241,0)' },
         ],
       },
       priceMark: { high: { color: tick }, low: { color: tick } },
@@ -79,8 +79,8 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
     overlay: {
       // accent handles normally, subtle white highlight when hovered / selected
       point: {
-        color: '#e6ff3a',
-        borderColor: '#101113',
+        color: '#6366f1',
+        borderColor: '#0a1020',
         borderSize: 1,
         radius: 4,
         activeColor: '#ffffff',
@@ -88,7 +88,7 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
         activeBorderSize: 2,
         activeRadius: 5,
       },
-      line: { color: '#e6ff3a', size: 1 },
+      line: { color: '#6366f1', size: 1 },
     },
   }
 }
@@ -121,7 +121,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
     clearDrawings: () => {
       chartRef.current?.removeOverlay({ groupId: G_USER })
     },
-    screenshot: () => chartRef.current?.getConvertPictureUrl(true, 'png', '#101113') ?? null,
+    screenshot: () => chartRef.current?.getConvertPictureUrl(true, 'png', '#0a1020') ?? null,
   }))
 
   // init once
@@ -192,7 +192,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
         groupId: G_POS,
         lock: true,
         points: [{ value: avgEntry }],
-        styles: { line: { color: '#e6ff3a' } },
+        styles: { line: { color: '#6366f1' } },
       })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,7 +210,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
         lock: true,
         points: [{ timestamp: m.time * 1000, value: m.price }],
         extendData: m.text,
-        styles: { text: { color: m.side === 'buy' ? '#4ade80' : '#f87171', size: 12, weight: 'bold' } },
+        styles: { text: { color: m.side === 'buy' ? '#2ee6a6' : '#f87171', size: 12, weight: 'bold' } },
       })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
