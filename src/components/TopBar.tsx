@@ -5,6 +5,8 @@ import { useEquity, useCurrentPrice } from '../hooks/useDerived'
 import { formatPriceUsd, formatUsd, formatPct, signClass } from '../lib/format'
 import { TokenIcon } from './TokenIcon'
 import { TokenSearch } from './TokenSearch'
+import { IconLineChart } from './icons'
+import { useUi } from '../state/useUi'
 import type { Mode } from '../types'
 
 function useFlash(value: number | null): string {
@@ -70,6 +72,9 @@ export function TopBar() {
             {formatUsd(equity)} <span className={signClass(totalPnl)} style={{ fontSize: 11 }}>{formatPct(pnlPct)}</span>
           </div>
         </div>
+        <button className="iconbtn" title="Performance analytics" onClick={() => useUi.getState().openAnalytics()}>
+          <IconLineChart size={16} />
+        </button>
         <button className="iconbtn" title="Reset account" onClick={() => setConfirm(true)}>
           ⟲
         </button>

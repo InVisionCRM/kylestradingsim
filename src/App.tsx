@@ -6,6 +6,7 @@ import { LeftPanel } from './components/LeftPanel'
 import { ChartPanel } from './components/ChartPanel'
 import { RightPanel } from './components/RightPanel'
 import { Blotter } from './components/Blotter'
+import { Dashboard } from './components/Dashboard'
 
 export function App() {
   useBootstrap()
@@ -24,6 +25,7 @@ export function App() {
         <RightPanel />
       </div>
       <Blotter />
+      <Dashboard />
     </div>
   )
 }
