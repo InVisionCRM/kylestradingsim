@@ -131,6 +131,8 @@ input { font-family: var(--mono); }
 .ddbtn { display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel2); color: var(--text); font-size: 12px; font-weight: 500; }
 .ddbtn.on { border-color: var(--accent); color: var(--accent); }
 .ddmenu { position: absolute; top: 34px; right: 0; z-index: 40; background: var(--panel); border: 1px solid var(--hair); border-radius: var(--r); padding: 5px; min-width: 210px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); }
+.ddmenu.scrollmenu { max-height: 380px; overflow-y: auto; }
+.ddgroup { font-size: 10px; letter-spacing: 0.12em; color: var(--faint); padding: 9px 9px 4px; text-transform: uppercase; }
 .ddrow { display: flex; align-items: center; gap: 9px; width: 100%; padding: 8px 9px; background: transparent; border: 0; border-radius: var(--r-sm); color: var(--text); font-size: 12px; text-align: left; cursor: pointer; }
 .ddrow:hover { background: var(--panel2); }
 .chk { width: 14px; height: 14px; border-radius: 4px; border: 1px solid var(--hair); flex: none; }

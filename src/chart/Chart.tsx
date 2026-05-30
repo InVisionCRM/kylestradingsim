@@ -2,17 +2,12 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { init, dispose, CandleType, YAxisType } from 'klinecharts'
 import type { Chart as KLineChartApi, KLineData, DeepPartial, Styles } from 'klinecharts'
 import type { Candle } from '../types'
-import type { ChartType, ScaleMode, IndicatorKey } from '../state/useChartPrefs'
+import type { ChartType, ScaleMode } from '../state/useChartPrefs'
+import { registerCustomIndicators } from './registerIndicators'
+import { isOverlayIndicator } from './indicatorCatalog'
 
-export interface IndicatorState {
-  ema: boolean
-  ma: boolean
-  boll: boolean
-  macd: boolean
-  rsi: boolean
-  kdj: boolean
-  vol: boolean
-}
+registerCustomIndicators()
+
 export interface ChartHandle {
   startDrawing: (overlayName: string) => void
   clearDrawings: () => void
@@ -28,7 +23,7 @@ interface Props {
   candles: Candle[]
   chartType: ChartType
   scaleMode: ScaleMode
-  indicators: IndicatorState
+  indicators: Record<string, boolean>
   avgEntry: number | null
   markers: ChartMarker[]
 }
@@ -37,17 +32,6 @@ interface Props {
 const G_USER = 'pdx-user'
 const G_POS = 'pdx-pos'
 const G_TRADES = 'pdx-trades'
-
-/** Our indicator keys → KLineChart built-in indicator names, and whether they overlay the candle pane. */
-const IND: Record<IndicatorKey, { name: string; overlay: boolean }> = {
-  ema: { name: 'EMA', overlay: true },
-  ma: { name: 'MA', overlay: true },
-  boll: { name: 'BOLL', overlay: true },
-  macd: { name: 'MACD', overlay: false },
-  rsi: { name: 'RSI', overlay: false },
-  kdj: { name: 'KDJ', overlay: false },
-  vol: { name: 'VOL', overlay: false },
-}
 
 const CANDLE_PANE = 'candle_pane'
 
@@ -101,9 +85,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
   const elRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<KLineChartApi | null>(null)
   const candlesRef = useRef<Candle[]>([])
-  const paneIds = useRef<Record<IndicatorKey, string | null>>({
-    ema: null, ma: null, boll: null, macd: null, rsi: null, kdj: null, vol: null,
-  })
+  const paneIds = useRef<Record<string, string>>({})
 
   useImperativeHandle(ref, () => ({
     startDrawing: (name) => {
@@ -128,7 +110,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
       window.removeEventListener('resize', onResize)
       dispose(el)
       chartRef.current = null
-      paneIds.current = { ema: null, ma: null, boll: null, macd: null, rsi: null, kdj: null, vol: null }
+      paneIds.current = {}
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -149,20 +131,23 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
     chartRef.current?.setStyles(themeStyles(chartType, scaleMode))
   }, [chartType, scaleMode])
 
-  // indicators: create / remove to match toggles
+  // indicators: create / remove to match the active set (any KLineChart built-in + custom VWAP)
   useEffect(() => {
     const chart = chartRef.current
     if (!chart) return
-    ;(Object.keys(IND) as IndicatorKey[]).forEach((key) => {
-      const { name, overlay } = IND[key]
-      const want = indicators[key]
-      const current = paneIds.current[key]
-      if (want && !current) {
+    // remove ones turned off
+    Object.keys(paneIds.current).forEach((name) => {
+      if (!indicators[name]) {
+        chart.removeIndicator(paneIds.current[name], name)
+        delete paneIds.current[name]
+      }
+    })
+    // add ones turned on
+    Object.keys(indicators).forEach((name) => {
+      if (indicators[name] && !paneIds.current[name]) {
+        const overlay = isOverlayIndicator(name)
         const id = chart.createIndicator(name, overlay, overlay ? { id: CANDLE_PANE } : undefined)
-        paneIds.current[key] = typeof id === 'string' ? id : overlay ? CANDLE_PANE : null
-      } else if (!want && current) {
-        chart.removeIndicator(current, name)
-        paneIds.current[key] = null
+        paneIds.current[name] = typeof id === 'string' ? id : overlay ? CANDLE_PANE : ''
       }
     })
   }, [indicators])

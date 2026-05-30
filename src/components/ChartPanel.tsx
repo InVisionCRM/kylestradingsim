@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useMarket } from '../state/useMarket'
 import { useMarketData } from '../state/useMarketData'
 import { useSim } from '../state/useSim'
-import { useChartPrefs, type IndicatorKey } from '../state/useChartPrefs'
+import { useChartPrefs } from '../state/useChartPrefs'
+import { INDICATORS } from '../chart/indicatorCatalog'
 import { useVisibleCandles, useActiveTokenKey } from '../hooks/useDerived'
 import { Chart, type ChartHandle, type ChartMarker } from '../chart/Chart'
 import { ReplayControls } from './ReplayControls'
@@ -15,15 +16,6 @@ import type { Timeframe } from '../types'
 import type { JSX } from 'react'
 
 const TFS: Timeframe[] = ['1m', '5m', '15m', '1h', '4h', '1d']
-const INDICATORS: { key: IndicatorKey; label: string }[] = [
-  { key: 'ema', label: 'EMA' },
-  { key: 'ma', label: 'MA' },
-  { key: 'boll', label: 'Bollinger Bands' },
-  { key: 'macd', label: 'MACD' },
-  { key: 'rsi', label: 'RSI' },
-  { key: 'kdj', label: 'KDJ' },
-  { key: 'vol', label: 'Volume' },
-]
 // Left-rail drawing tools → KLineChart built-in overlay names
 const TOOLS: { id: string; title: string; overlay: string | null; icon: JSX.Element }[] = [
   { id: 'cursor', title: 'Cursor', overlay: null, icon: <IconCursor /> },
@@ -45,7 +37,7 @@ function Clock() {
 }
 
 function IndicatorsMenu() {
-  const prefs = useChartPrefs()
+  const indicators = useChartPrefs((s) => s.indicators)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -55,20 +47,26 @@ function IndicatorsMenu() {
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
   }, [])
-  const anyOn = INDICATORS.some((i) => prefs[i.key])
+
+  const anyOn = Object.values(indicators).some(Boolean)
+  const row = (i: { name: string; label: string }) => (
+    <button key={i.name} className="ddrow" onClick={() => useChartPrefs.getState().toggleIndicator(i.name)}>
+      <span className={`chk ${indicators[i.name] ? 'on' : ''}`} />
+      {i.label}
+    </button>
+  )
+
   return (
     <div className="dd" ref={ref}>
       <button className={`ddbtn ${anyOn ? 'on' : ''}`} onClick={() => setOpen((o) => !o)}>
         <IconLineChart size={14} /> Indicators <IconChevron size={14} />
       </button>
       {open && (
-        <div className="ddmenu">
-          {INDICATORS.map((i) => (
-            <button key={i.key} className="ddrow" onClick={() => prefs.toggle(i.key)}>
-              <span className={`chk ${prefs[i.key] ? 'on' : ''}`} />
-              {i.label}
-            </button>
-          ))}
+        <div className="ddmenu scrollmenu">
+          <div className="ddgroup">Price overlays</div>
+          {INDICATORS.filter((i) => i.overlay).map(row)}
+          <div className="ddgroup">Oscillators &amp; volume</div>
+          {INDICATORS.filter((i) => !i.overlay).map(row)}
         </div>
       )}
     </div>
@@ -83,16 +81,11 @@ export function ChartPanel() {
   const candles = useVisibleCandles()
   const chartType = useChartPrefs((s) => s.chartType)
   const scaleMode = useChartPrefs((s) => s.scaleMode)
-  const prefs = useChartPrefs()
+  const indicators = useChartPrefs((s) => s.indicators)
 
   const colRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<ChartHandle>(null)
   const [tool, setTool] = useState('cursor')
-
-  const indicators = useMemo(
-    () => ({ ema: prefs.ema, ma: prefs.ma, boll: prefs.boll, macd: prefs.macd, rsi: prefs.rsi, kdj: prefs.kdj, vol: prefs.vol }),
-    [prefs.ema, prefs.ma, prefs.boll, prefs.macd, prefs.rsi, prefs.kdj, prefs.vol],
-  )
 
   const account = useSim((s) => s.accounts[s.mode])
   const activeKey = useActiveTokenKey()
