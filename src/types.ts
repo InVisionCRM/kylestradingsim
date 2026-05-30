@@ -83,3 +83,36 @@ export interface WatchItem {
 export function tokenKeyOf(chainId: string, pairAddress: string): TokenKey {
   return `${chainId}:${pairAddress}`
 }
+
+/** Minimal token identity needed to place a trade (lighter than a full Pair). */
+export interface TokenRef {
+  chainId: string
+  pairAddress: string
+  symbol: string
+  imageUrl: string | null
+}
+
+export function refFromPair(pair: Pair): TokenRef {
+  return { chainId: pair.chainId, pairAddress: pair.pairAddress, symbol: pair.baseToken.symbol, imageUrl: pair.imageUrl }
+}
+
+export type OrderKind = 'limit' | 'stop' | 'tp' | 'sl'
+
+/** A resting order that fills when price crosses its trigger. */
+export interface PendingOrder {
+  id: string
+  createdTs: number
+  mode: Mode
+  tokenKey: TokenKey
+  chainId: string
+  pairAddress: string
+  symbol: string
+  imageUrl: string | null
+  side: Side
+  kind: OrderKind
+  price: number // trigger price (USD)
+  sizeUsd: number | null // for buys (USD to spend)
+  sizeToken: number | null // for sells (token qty); null + reduceOnly = whole position
+  reduceOnly: boolean // TP/SL close an existing position
+  ocoGroup: string | null // TP & SL share a group (one fills → cancel the other)
+}

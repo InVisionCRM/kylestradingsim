@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import type { Account, Mode, Pair } from '../types'
+import type { Account, Mode, TokenRef } from '../types'
 import { tokenKeyOf } from '../types'
 import { applyBuy, applySell, newAccount } from '../sim/engine'
 
@@ -17,8 +17,8 @@ interface SimState {
   accounts: Record<Mode, Account>
   setMode: (m: Mode) => void
   /** Throws SimError on failure — callers catch to show a message. */
-  buy: (pair: Pair, priceUsd: number, usdAmount: number, ts: number) => void
-  sell: (pair: Pair, priceUsd: number, qtyToken: number, ts: number) => void
+  buy: (ref: TokenRef, priceUsd: number, usdAmount: number, ts: number) => void
+  sell: (ref: TokenRef, priceUsd: number, qtyToken: number, ts: number) => void
   reset: (mode: Mode) => void
 }
 
@@ -31,14 +31,14 @@ export const useSim = create<SimState>()(
 
       setMode: (mode) => set({ mode }),
 
-      buy: (pair, priceUsd, usdAmount, ts) => {
+      buy: (ref, priceUsd, usdAmount, ts) => {
         const { mode, accounts, settings } = get()
         const next = applyBuy(accounts[mode], {
-          tokenKey: tokenKeyOf(pair.chainId, pair.pairAddress),
-          chainId: pair.chainId,
-          pairAddress: pair.pairAddress,
-          symbol: pair.baseToken.symbol,
-          imageUrl: pair.imageUrl,
+          tokenKey: tokenKeyOf(ref.chainId, ref.pairAddress),
+          chainId: ref.chainId,
+          pairAddress: ref.pairAddress,
+          symbol: ref.symbol,
+          imageUrl: ref.imageUrl,
           priceUsd,
           usdAmount,
           feeBps: settings.feeBps,
@@ -48,10 +48,10 @@ export const useSim = create<SimState>()(
         set({ accounts: { ...accounts, [mode]: next } })
       },
 
-      sell: (pair, priceUsd, qtyToken, ts) => {
+      sell: (ref, priceUsd, qtyToken, ts) => {
         const { mode, accounts, settings } = get()
         const next = applySell(accounts[mode], {
-          tokenKey: tokenKeyOf(pair.chainId, pair.pairAddress),
+          tokenKey: tokenKeyOf(ref.chainId, ref.pairAddress),
           priceUsd,
           qtyToken,
           feeBps: settings.feeBps,

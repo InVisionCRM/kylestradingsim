@@ -5,8 +5,9 @@ import { useSim } from '../state/useSim'
 import { useChartPrefs } from '../state/useChartPrefs'
 import { INDICATORS } from '../chart/indicatorCatalog'
 import { useVisibleCandles, useActiveTokenKey } from '../hooks/useDerived'
-import { Chart, type ChartHandle, type ChartMarker } from '../chart/Chart'
+import { Chart, type ChartHandle, type ChartMarker, type OrderLine } from '../chart/Chart'
 import { ReplayControls } from './ReplayControls'
+import { useOrders } from '../state/useOrders'
 import { formatQty } from '../lib/format'
 import {
   IconCandles, IconLineChart, IconFullscreen, IconCamera, IconChevron,
@@ -102,6 +103,12 @@ export function ChartPanel() {
   }, [account.trades, activeKey])
   const avgEntry = activeKey ? account.positions[activeKey]?.avgEntryUsd ?? null : null
 
+  const ordersAll = useOrders((s) => s.orders[mode] ?? [])
+  const orderLines: OrderLine[] = useMemo(
+    () => ordersAll.filter((o) => o.tokenKey === activeKey).map((o) => ({ id: o.id, price: o.price, kind: o.kind, side: o.side })),
+    [ordersAll, activeKey],
+  )
+
   const pickTool = (id: string, overlay: string | null) => {
     setTool(id)
     if (overlay) chartRef.current?.startDrawing(overlay)
@@ -158,7 +165,18 @@ export function ChartPanel() {
           </button>
         </div>
         <div className="chartwrap">
-          <Chart ref={chartRef} candles={candles} chartType={chartType} scaleMode={scaleMode} indicators={indicators} avgEntry={avgEntry} markers={markers} tokenKey={activeKey ?? ''} />
+          <Chart
+            ref={chartRef}
+            candles={candles}
+            chartType={chartType}
+            scaleMode={scaleMode}
+            indicators={indicators}
+            avgEntry={avgEntry}
+            markers={markers}
+            tokenKey={activeKey ?? ''}
+            orders={orderLines}
+            onOrderMove={(id, p) => useOrders.getState().updatePrice(mode, id, p)}
+          />
           {loading && <div className="chart-overlay">Loading chart…</div>}
           {!loading && error && <div className="chart-overlay">{error}</div>}
           {!loading && !error && candles.length === 0 && <div className="chart-overlay">No chart data for this token.</div>}

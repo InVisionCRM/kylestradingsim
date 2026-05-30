@@ -191,6 +191,25 @@ input { font-family: var(--mono); }
 .dtable td { font-family: var(--mono); font-size: 12px; padding: 8px 10px; border-top: 1px solid var(--hair-soft); white-space: nowrap; }
 .dtable td.lab { font-family: var(--font); font-weight: 600; }
 .reveal { opacity: 0; transform: translateY(8px); animation: rise 0.5s ease forwards; }
+
+/* order types + bracket + orders list */
+.otabs { display: flex; gap: 4px; margin-bottom: 11px; }
+.otabs button { flex: 1; font-size: 11px; font-weight: 600; padding: 7px; border: 1px solid var(--hair); border-radius: var(--r-sm); background: var(--panel2); color: var(--muted); cursor: pointer; }
+.otabs button.on { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.12); }
+.bracket { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 11px; }
+.bk { display: flex; align-items: center; gap: 6px; background: var(--panel2); border: 1px solid var(--hair); border-radius: 6px; padding: 6px 9px; }
+.bk span { font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.bk input { flex: 1; min-width: 0; background: transparent; border: 0; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none; }
+.orow { display: flex; align-items: center; gap: 8px; padding: 8px 14px; border-bottom: 1px solid var(--hair-soft); }
+.okind { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 6px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; background: rgba(99,102,241,0.16); color: var(--accent); }
+.okind.tp { background: var(--up-soft); color: var(--up); }
+.okind.sl { background: var(--down-soft); color: var(--down); }
+.okind.stop { background: rgba(251,191,36,0.16); color: #fbbf24; }
+.osym { flex: 1; font-weight: 600; font-size: 12px; min-width: 0; }
+.oprice { font-size: 11px; }
+.osize { font-size: 11px; color: var(--muted); min-width: 44px; text-align: right; }
+.ocancel { width: 20px; height: 20px; flex: none; border: 1px solid var(--hair); border-radius: 4px; background: var(--panel2); color: var(--faint); font-size: 13px; line-height: 1; cursor: pointer; }
+.ocancel:hover { color: var(--down); border-color: var(--down); }
 .ohlc b { color: var(--text); font-weight: 500; }
 .chart-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 12px; z-index: 6; }
 

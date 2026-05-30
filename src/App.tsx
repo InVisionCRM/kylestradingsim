@@ -1,6 +1,7 @@
 import { useBootstrap } from './hooks/useBootstrap'
 import { useCandlesLoader, useLivePriceLoader, useReplayClock, usePositionPricesLoader } from './hooks/useDataLoaders'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
+import { useOrderEngine } from './hooks/useOrderEngine'
 import { TopBar } from './components/TopBar'
 import { LeftPanel } from './components/LeftPanel'
 import { ChartPanel } from './components/ChartPanel'
@@ -15,6 +16,7 @@ export function App() {
   usePositionPricesLoader()
   useReplayClock()
   useKeyboardShortcuts()
+  useOrderEngine()
 
   return (
     <div className="app">

@@ -3,6 +3,8 @@ import { useMarket } from '../state/useMarket'
 import { useSim } from '../state/useSim'
 import { useCurrentPrice, useActiveTokenKey, usePriceFor } from '../hooks/useDerived'
 import { getPair } from '../api/dexscreener'
+import { useOrders } from '../state/useOrders'
+import { orderLabel } from '../sim/orders'
 import { OrderPanel } from './OrderPanel'
 import { TokenIcon } from './TokenIcon'
 import { IconLink } from './icons'
@@ -73,12 +75,35 @@ function PositionsMini() {
   )
 }
 
+function OrdersList() {
+  const mode = useSim((s) => s.mode)
+  const list = useOrders((s) => s.orders[mode] ?? [])
+  if (!list.length) return <div className="info"><div className="center-msg" style={{ height: 60 }}>No open orders.</div></div>
+  return (
+    <div className="minilist">
+      {list.map((o) => (
+        <div className="orow" key={o.id}>
+          <span className={`okind ${o.kind}`}>{orderLabel(o)}</span>
+          <span className="osym">{o.symbol}</span>
+          <span className="oprice num">@ {formatPrice(o.price)}</span>
+          <span className="osize num">{o.sizeUsd != null ? formatUsd(o.sizeUsd) : o.sizeToken != null ? formatQty(o.sizeToken) : 'close'}</span>
+          <button className="ocancel" title="Cancel order" onClick={() => useOrders.getState().cancel(mode, o.id)}>
+            ×
+          </button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export function RightPanel() {
   const pair = useMarket((s) => s.activePair)
+  const mode = useSim((s) => s.mode)
   const account = useSim((s) => s.accounts[s.mode])
+  const orderCount = useOrders((s) => (s.orders[mode] ?? []).length)
   const price = useCurrentPrice()
   const activeKey = useActiveTokenKey()
-  const [tab, setTab] = useState<'info' | 'positions'>('info')
+  const [tab, setTab] = useState<'info' | 'positions' | 'orders'>('info')
 
   const pos = activeKey ? account.positions[activeKey] : undefined
   const sym = pair?.baseToken.symbol ?? ''
@@ -124,13 +149,16 @@ export function RightPanel() {
 
       <div className="tabs">
         <button className={tab === 'info' ? 'on' : ''} onClick={() => setTab('info')}>
-          TOKEN INFO
+          INFO
         </button>
         <button className={tab === 'positions' ? 'on' : ''} onClick={() => setTab('positions')}>
           POSITIONS
         </button>
+        <button className={tab === 'orders' ? 'on' : ''} onClick={() => setTab('orders')}>
+          ORDERS{orderCount ? ` (${orderCount})` : ''}
+        </button>
       </div>
-      {tab === 'info' ? <InfoGrid /> : <PositionsMini />}
+      {tab === 'info' ? <InfoGrid /> : tab === 'positions' ? <PositionsMini /> : <OrdersList />}
     </div>
   )
 }

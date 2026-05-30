@@ -19,6 +19,12 @@ export interface ChartMarker {
   side: 'buy' | 'sell'
   text: string
 }
+export interface OrderLine {
+  id: string
+  price: number
+  kind: 'limit' | 'stop' | 'tp' | 'sl'
+  side: 'buy' | 'sell'
+}
 interface Props {
   candles: Candle[]
   chartType: ChartType
@@ -27,12 +33,15 @@ interface Props {
   avgEntry: number | null
   markers: ChartMarker[]
   tokenKey: string
+  orders: OrderLine[]
+  onOrderMove: (id: string, price: number) => void
 }
 
-// overlay groups so "Clear" only removes user drawings, never markers / avg line
+// overlay groups so "Clear" only removes user drawings, never markers / avg / order lines
 const G_USER = 'pdx-user'
 const G_POS = 'pdx-pos'
 const G_TRADES = 'pdx-trades'
+const G_ORDERS = 'pdx-orders'
 
 const CANDLE_PANE = 'candle_pane'
 
@@ -94,7 +103,7 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
 }
 
 export const Chart = forwardRef<ChartHandle, Props>(function Chart(
-  { candles, chartType, scaleMode, indicators, avgEntry, markers, tokenKey },
+  { candles, chartType, scaleMode, indicators, avgEntry, markers, tokenKey, orders, onOrderMove },
   ref,
 ) {
   const elRef = useRef<HTMLDivElement>(null)
@@ -102,6 +111,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
   const candlesRef = useRef<Candle[]>([])
   const paneIds = useRef<Record<string, string>>({})
   const selectedRef = useRef<string | null>(null)
+  const draggingRef = useRef(false)
 
   useImperativeHandle(ref, () => ({
     startDrawing: (name) => {
@@ -236,6 +246,33 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
     selectedRef.current = null
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tokenKey])
+
+  // draggable order lines (limit = indigo, stop = amber, TP = mint, SL = red)
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart || draggingRef.current) return
+    chart.removeOverlay({ groupId: G_ORDERS })
+    orders.forEach((o) => {
+      const color = o.kind === 'tp' ? '#2ee6a6' : o.kind === 'sl' ? '#f87171' : o.kind === 'stop' ? '#fbbf24' : '#6366f1'
+      chart.createOverlay({
+        name: 'priceLine',
+        groupId: G_ORDERS,
+        points: [{ value: o.price }],
+        styles: { line: { color } },
+        onPressedMoveStart: () => {
+          draggingRef.current = true
+          return false
+        },
+        onPressedMoveEnd: (e) => {
+          draggingRef.current = false
+          const v = e.overlay.points[0]?.value
+          if (typeof v === 'number' && v > 0) onOrderMove(o.id, v)
+          return false
+        },
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders])
 
   return (
     <div className="chart-host">
