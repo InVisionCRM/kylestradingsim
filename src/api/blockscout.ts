@@ -69,6 +69,11 @@ function toUnits(raw: string | undefined, decimals: number): number {
 
 /** ERC-20 holdings for a wallet, richest first. Single page (top ~50) — enough for a list. */
 export async function getTokenHoldings(chain: EvmChain, wallet: string): Promise<TokenHolding[]> {
+  if (chain === 'pulsechain') {
+    // PulseChain's explorer is blocked — read balances from the g4mm4 node via our function.
+    const data = await getJson<{ holdings: TokenHolding[] }>(`/api/pulse-balances?wallet=${wallet}`)
+    return data.holdings ?? []
+  }
   const data = await getJson<Paged<RawHolding>>(bsUrl(chain, `/addresses/${wallet}/tokens?type=ERC-20`))
   const out: TokenHolding[] = []
   for (const it of data.items ?? []) {
@@ -100,6 +105,11 @@ const MAX_PAGES = 100
 
 /** Every ERC-20 transfer of one token in/out of a wallet — full history, paged. */
 export async function getTokenTransfers(chain: EvmChain, wallet: string, token: string): Promise<RawTransfer[]> {
+  if (chain === 'pulsechain') {
+    // PulseChain trades come from the g4mm4 node (eth_getLogs) via our function.
+    const data = await getJson<{ transfers: RawTransfer[] }>(`/api/pulse-trades?wallet=${wallet}&token=${token}`)
+    return data.transfers ?? []
+  }
   const all: RawTransfer[] = []
   let query: Record<string, string> = { token, type: 'ERC-20' }
 

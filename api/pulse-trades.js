@@ -14,15 +14,22 @@ const TRANSFER = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523
 const DECIMALS = '0x313ce567'
 const MAX_TRANSFERS = 1500 // keep the chart readable + the response bounded
 
-async function rpc(method, params) {
-  const r = await fetch(RPC, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
-  })
-  const j = await r.json()
-  if (j.error) throw new Error(j.error.message || 'rpc error')
-  return j.result
+async function rpc(method, params, timeoutMs = 9000) {
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), timeoutMs)
+  try {
+    const r = await fetch(RPC, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 1, method, params }),
+      signal: ctrl.signal,
+    })
+    const j = await r.json()
+    if (j.error) throw new Error(j.error.message || 'rpc error')
+    return j.result
+  } finally {
+    clearTimeout(t)
+  }
 }
 
 const asTopic = (addr) => '0x' + addr.slice(2).padStart(64, '0')
@@ -55,8 +62,8 @@ export default async function handler(req, res) {
     const base = { address: token, fromBlock: '0x0', toBlock: 'latest' }
     const [decHex, sent, recv, clock] = await Promise.all([
       rpc('eth_call', [{ to: token, data: DECIMALS }, 'latest']).catch(() => '0x12'),
-      rpc('eth_getLogs', [{ ...base, topics: [TRANSFER, w] }]), // from = wallet
-      rpc('eth_getLogs', [{ ...base, topics: [TRANSFER, null, w] }]), // to = wallet
+      rpc('eth_getLogs', [{ ...base, topics: [TRANSFER, w] }], 8000).catch(() => []), // from = wallet
+      rpc('eth_getLogs', [{ ...base, topics: [TRANSFER, null, w] }], 8000).catch(() => []), // to = wallet
       blockClock(),
     ])
     const decimals = String(parseInt(decHex, 16) || 18)
