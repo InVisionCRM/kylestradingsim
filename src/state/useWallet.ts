@@ -56,22 +56,34 @@ export const useWallet = create<WalletState>()(
         }
         set({ status: 'loading', error: null, address, holdings: [], activeToken: null, trades: [], tradesFor: null })
 
-        // Auto-detect: pull holdings on both chains, keep whichever has more (tiebreak PulseChain, listed first).
+        // Auto-detect: pull holdings on both chains. Track reachability separately so a
+        // down explorer reads as "unreachable" — never as "this wallet has no tokens".
         const results = await Promise.all(
           EVM_CHAINS.map(async (chain) => {
             try {
-              return { chain, holdings: await getTokenHoldings(chain, address) }
+              return { chain, holdings: await getTokenHoldings(chain, address), reachable: true }
             } catch {
-              return { chain, holdings: [] as TokenHolding[] }
+              return { chain, holdings: [] as TokenHolding[], reachable: false }
             }
           }),
         )
-        const best = results.reduce((a, b) => (b.holdings.length > a.holdings.length ? b : a))
-        if (best.holdings.length === 0) {
-          set({ status: 'error', error: 'No ERC-20 tokens found on PulseChain or Ethereum for that wallet' })
+
+        const withTokens = results.filter((r) => r.holdings.length > 0)
+        if (withTokens.length > 0) {
+          const best = withTokens.reduce((a, b) => (b.holdings.length > a.holdings.length ? b : a))
+          set({ status: 'ready', chain: best.chain, holdings: best.holdings, error: null })
           return
         }
-        set({ status: 'ready', chain: best.chain, holdings: best.holdings, error: null })
+
+        // Nothing came back — be honest about why.
+        const down = results.filter((r) => !r.reachable).map((r) => (r.chain === 'pulsechain' ? 'PulseChain' : 'Ethereum'))
+        if (down.length === EVM_CHAINS.length) {
+          set({ status: 'error', error: "Couldn't reach either block explorer — they may be down. Try again shortly." })
+        } else if (down.length > 0) {
+          set({ status: 'error', error: `The ${down.join(' & ')} explorer is down right now, so its tokens can't be loaded. Try again shortly.` })
+        } else {
+          set({ status: 'error', error: 'No ERC-20 tokens found on PulseChain or Ethereum for that wallet' })
+        }
       },
 
       clear: () =>
