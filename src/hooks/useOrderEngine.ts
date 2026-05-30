@@ -6,6 +6,7 @@ import { useMarketData } from '../state/useMarketData'
 import { useReplay } from '../state/useReplay'
 import { usePrices } from '../state/usePrices'
 import { shouldTrigger } from '../sim/orders'
+import { executionPrice } from '../sim/slippage'
 import { tokenKeyOf, type PendingOrder, type TokenRef } from '../types'
 
 function activeContext(): { activeKey: string | null; activePrice: number | null } {
@@ -42,17 +43,21 @@ function evaluate(): void {
     if (price == null || !(price > 0) || !shouldTrigger(o, price)) continue
 
     const ref: TokenRef = { chainId: o.chainId, pairAddress: o.pairAddress, symbol: o.symbol, imageUrl: o.imageUrl }
+    const slip = useSim.getState().settings.slippageOn
+    const liq = usePrices.getState().liq[o.tokenKey] ?? null
     try {
       if (o.side === 'buy') {
         const usd = o.sizeUsd ?? 0
         if (usd <= 0) continue
-        useSim.getState().buy(ref, price, usd, ts)
+        const exec = slip ? executionPrice(price, usd, 'buy', liq) : price
+        useSim.getState().buy(ref, exec, usd, ts)
       } else {
         const held = useSim.getState().accounts[mode].positions[o.tokenKey]?.qty ?? 0
         if (o.reduceOnly && held <= 0) continue // nothing to close yet — keep waiting
         const qty = Math.min(o.sizeToken ?? held, held)
         if (qty <= 0) continue
-        useSim.getState().sell(ref, price, qty, ts)
+        const exec = slip ? executionPrice(price, qty * price, 'sell', liq) : price
+        useSim.getState().sell(ref, exec, qty, ts)
       }
       useOrders.getState().cancel(mode, o.id)
       if (o.ocoGroup) useOrders.getState().cancelGroup(mode, o.ocoGroup)

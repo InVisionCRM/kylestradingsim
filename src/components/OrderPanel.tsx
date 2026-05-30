@@ -8,6 +8,7 @@ import { useReplay } from '../state/useReplay'
 import { useCurrentPrice, useActiveTokenKey } from '../hooks/useDerived'
 import { SimError } from '../sim/errors'
 import { refFromPair, tokenKeyOf } from '../types'
+import { executionPrice, impactFraction } from '../sim/slippage'
 import { formatQty, formatPrice, formatUsd } from '../lib/format'
 
 type OType = 'market' | 'limit' | 'stop'
@@ -46,6 +47,14 @@ export function OrderPanel() {
   const tokenQty = unit === 'TOKEN' ? amt : price ? amt / price : 0
   const fee = (usdValue * settings.feeBps) / 10000
   const trigPrice = Number(trigger) || 0
+
+  const liquidity = pair?.liquidityUsd ?? null
+  const refPrice = otype === 'market' ? price ?? 0 : trigPrice
+  const sizeUsdEst = side === 'buy' ? usdValue : tokenQty * refPrice
+  const impactF = settings.slippageOn ? impactFraction(sizeUsdEst, liquidity) : 0
+  const fillAvg = refPrice > 0 ? (side === 'buy' ? refPrice * (1 + impactF) : refPrice / (1 + impactF)) : 0
+  const recvTokens = side === 'buy' && fillAvg > 0 ? usdValue / fillAvg : 0
+  const recvUsd = side === 'sell' ? tokenQty * fillAvg : 0
 
   const setPct = (pct: number) => {
     if (side === 'buy') {
@@ -88,10 +97,12 @@ export function OrderPanel() {
       if (!price || price <= 0) return setErr('No live price yet — try again in a moment')
       try {
         if (side === 'buy') {
-          useSim.getState().buy(refFromPair(pair), price, usdValue, nowTs(mode))
+          const exec = settings.slippageOn ? executionPrice(price, usdValue, 'buy', liquidity) : price
+          useSim.getState().buy(refFromPair(pair), exec, usdValue, nowTs(mode))
           placeBracket()
         } else {
-          useSim.getState().sell(refFromPair(pair), price, tokenQty, nowTs(mode))
+          const exec = settings.slippageOn ? executionPrice(price, tokenQty * price, 'sell', liquidity) : price
+          useSim.getState().sell(refFromPair(pair), exec, tokenQty, nowTs(mode))
         }
         setAmount('')
         setTp('')
@@ -211,15 +222,28 @@ export function OrderPanel() {
         {otype === 'market' ? ` · @ ${formatPrice(price)}` : ` · trigger @ ${formatPrice(trigPrice || null)}`}
       </div>
 
+      {settings.slippageOn && amt > 0 && refPrice > 0 && (
+        <div className="slipline">
+          <span>
+            Price impact <b className={impactF > 0.03 ? 'down' : impactF > 0.01 ? 'warn' : ''}>{(impactF * 100).toFixed(2)}%</b>
+          </span>
+          <span>receive ≈ {side === 'buy' ? `${formatQty(recvTokens)} ${sym}` : formatUsd(recvUsd)}</span>
+        </div>
+      )}
+
       <button className={`submit ${side}`} disabled={disabled} onClick={submit}>
         {submitLabel}
       </button>
 
       <div className="subnote">
-        <span>
-          Fee {(settings.feeBps / 100).toFixed(2)}% · {formatUsd(fee)}
-        </span>
-        <span>{otype === 'market' ? (mode === 'replay' ? 'Replay fill' : 'Market') : 'Resting order'}</span>
+        <span>Fee {(settings.feeBps / 100).toFixed(2)}% · {formatUsd(fee)}</span>
+        <button
+          className={`sliptoggle ${settings.slippageOn ? 'on' : ''}`}
+          onClick={() => useSim.getState().setSlippage(!settings.slippageOn)}
+          title="Liquidity-aware slippage"
+        >
+          Slippage {settings.slippageOn ? 'ON' : 'OFF'}
+        </button>
       </div>
       {err && <div className="errline">{err}</div>}
     </div>

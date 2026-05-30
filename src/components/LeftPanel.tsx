@@ -3,6 +3,7 @@ import { useWatchlist } from '../state/useWatchlist'
 import { useMarket } from '../state/useMarket'
 import { getPair } from '../api/dexscreener'
 import { ensureLogo } from '../lib/logos'
+import { usePrices } from '../state/usePrices'
 import type { Pair, WatchItem } from '../types'
 import { formatPrice, formatPct, signClass } from '../lib/format'
 import { TokenIcon } from './TokenIcon'
@@ -18,6 +19,7 @@ function useWatchPrices(items: WatchItem[]): Record<string, Pair> {
           const p = await getPair(it.chainId, it.pairAddress)
           if (alive && p) {
             ensureLogo(p)
+            if (p.priceUsd) usePrices.getState().setPrice(`${it.chainId}:${it.pairAddress}`, p.priceUsd, p.liquidityUsd)
             setMap((m) => ({ ...m, [`${it.chainId}:${it.pairAddress}`]: p }))
           }
         } catch {

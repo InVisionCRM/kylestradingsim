@@ -3,15 +3,23 @@ import { create } from 'zustand'
 interface PricesState {
   /** last-known USD price per tokenKey (`chainId:pairAddress`) */
   map: Record<string, number>
-  setPrice: (tokenKey: string, price: number) => void
+  /** last-known pool liquidity (USD) per tokenKey, for slippage */
+  liq: Record<string, number>
+  setPrice: (tokenKey: string, price: number, liquidity?: number | null) => void
 }
 
 /**
- * Shared last-known prices for every token we've seen (active, watchlist, positions).
- * Lets equity / P&L be valued across ALL positions, not just the selected one.
+ * Shared last-known prices + liquidity for every token we've seen (active,
+ * watchlist, positions). Powers equity/P&L valuation and slippage on resting orders.
  */
 export const usePrices = create<PricesState>((set) => ({
   map: {},
-  setPrice: (tokenKey, price) =>
-    set((s) => (price > 0 && s.map[tokenKey] !== price ? { map: { ...s.map, [tokenKey]: price } } : s)),
+  liq: {},
+  setPrice: (tokenKey, price, liquidity) =>
+    set((s) => {
+      const map = price > 0 && s.map[tokenKey] !== price ? { ...s.map, [tokenKey]: price } : s.map
+      const liq =
+        liquidity != null && liquidity > 0 && s.liq[tokenKey] !== liquidity ? { ...s.liq, [tokenKey]: liquidity } : s.liq
+      return map === s.map && liq === s.liq ? s : { map, liq }
+    }),
 }))

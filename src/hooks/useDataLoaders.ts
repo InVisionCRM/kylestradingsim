@@ -60,7 +60,7 @@ export function useLivePriceLoader(): void {
         if (!alive || !p) return
         useMarketData.getState().setLivePrice(p.priceUsd)
         useMarket.getState().setActivePair(p)
-        if (p.priceUsd) usePrices.getState().setPrice(tokenKeyOf(p.chainId, p.pairAddress), p.priceUsd)
+        if (p.priceUsd) usePrices.getState().setPrice(tokenKeyOf(p.chainId, p.pairAddress), p.priceUsd, p.liquidityUsd)
         ensureLogo(p)
       } catch {
         /* transient — keep last known price */
@@ -110,7 +110,7 @@ export function usePositionPricesLoader(): void {
         try {
           const p = await getPair(pos.chainId, pos.pairAddress)
           if (!alive || !p) continue
-          if (p.priceUsd) usePrices.getState().setPrice(pos.tokenKey, p.priceUsd)
+          if (p.priceUsd) usePrices.getState().setPrice(pos.tokenKey, p.priceUsd, p.liquidityUsd)
           ensureLogo(p)
         } catch {
           /* transient */

@@ -210,6 +210,10 @@ input { font-family: var(--mono); }
 .osize { font-size: 11px; color: var(--muted); min-width: 44px; text-align: right; }
 .ocancel { width: 20px; height: 20px; flex: none; border: 1px solid var(--hair); border-radius: 4px; background: var(--panel2); color: var(--faint); font-size: 13px; line-height: 1; cursor: pointer; }
 .ocancel:hover { color: var(--down); border-color: var(--down); }
+.slipline { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); margin-bottom: 9px; }
+.slipline .warn { color: #fbbf24; }
+.sliptoggle { font-family: var(--mono); font-size: 10px; letter-spacing: 0.04em; padding: 3px 7px; border-radius: var(--r-sm); border: 1px solid var(--hair); background: transparent; color: var(--faint); cursor: pointer; }
+.sliptoggle.on { border-color: var(--accent); color: var(--accent); background: rgba(99,102,241,0.12); }
 .ohlc b { color: var(--text); font-weight: 500; }
 .chart-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 12px; z-index: 6; }
 

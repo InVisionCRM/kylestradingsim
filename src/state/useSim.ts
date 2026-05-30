@@ -16,6 +16,7 @@ interface SimState {
   settings: Settings
   accounts: Record<Mode, Account>
   setMode: (m: Mode) => void
+  setSlippage: (on: boolean) => void
   /** Throws SimError on failure — callers catch to show a message. */
   buy: (ref: TokenRef, priceUsd: number, usdAmount: number, ts: number) => void
   sell: (ref: TokenRef, priceUsd: number, qtyToken: number, ts: number) => void
@@ -26,10 +27,11 @@ export const useSim = create<SimState>()(
   persist(
     (set, get) => ({
       mode: 'live',
-      settings: { feeBps: 30, slippageOn: false },
+      settings: { feeBps: 30, slippageOn: true },
       accounts: { live: newAccount(STARTING_BALANCE), replay: newAccount(STARTING_BALANCE) },
 
       setMode: (mode) => set({ mode }),
+      setSlippage: (on) => set((s) => ({ settings: { ...s.settings, slippageOn: on } })),
 
       buy: (ref, priceUsd, usdAmount, ts) => {
         const { mode, accounts, settings } = get()
