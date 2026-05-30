@@ -3,8 +3,11 @@ import { useMarket } from '../state/useMarket'
 import { useMarketData } from '../state/useMarketData'
 import { useReplay } from '../state/useReplay'
 import { useSim } from '../state/useSim'
+import { usePrices } from '../state/usePrices'
 import { fetchOhlcv } from '../api/geckoterminal'
 import { getPair } from '../api/dexscreener'
+import { ensureLogo } from '../lib/logos'
+import { tokenKeyOf } from '../types'
 
 /** Loads OHLCV whenever the active pair or timeframe changes; resets the replay timeline. */
 export function useCandlesLoader(): void {
@@ -57,6 +60,8 @@ export function useLivePriceLoader(): void {
         if (!alive || !p) return
         useMarketData.getState().setLivePrice(p.priceUsd)
         useMarket.getState().setActivePair(p)
+        if (p.priceUsd) usePrices.getState().setPrice(tokenKeyOf(p.chainId, p.pairAddress), p.priceUsd)
+        ensureLogo(p)
       } catch {
         /* transient — keep last known price */
       }
@@ -87,4 +92,36 @@ export function useReplayClock(): void {
     }, interval)
     return () => clearInterval(id)
   }, [mode, playing, speed, length])
+}
+
+/**
+ * Keeps a live price for EVERY token held in the live account, so total equity and
+ * per-position P&L are correct regardless of which token is selected.
+ */
+export function usePositionPricesLoader(): void {
+  const positionKeys = useSim((s) => Object.keys(s.accounts.live.positions).join(','))
+
+  useEffect(() => {
+    if (!positionKeys) return
+    let alive = true
+    const load = async () => {
+      const positions = useSim.getState().accounts.live.positions
+      for (const pos of Object.values(positions)) {
+        try {
+          const p = await getPair(pos.chainId, pos.pairAddress)
+          if (!alive || !p) continue
+          if (p.priceUsd) usePrices.getState().setPrice(pos.tokenKey, p.priceUsd)
+          ensureLogo(p)
+        } catch {
+          /* transient */
+        }
+      }
+    }
+    load()
+    const id = setInterval(load, 20000)
+    return () => {
+      alive = false
+      clearInterval(id)
+    }
+  }, [positionKeys])
 }

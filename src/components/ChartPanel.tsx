@@ -3,9 +3,10 @@ import { useMarket } from '../state/useMarket'
 import { useMarketData } from '../state/useMarketData'
 import { useSim } from '../state/useSim'
 import { useChartPrefs, type IndicatorKey } from '../state/useChartPrefs'
-import { useVisibleCandles } from '../hooks/useDerived'
-import { Chart, type ChartHandle } from '../chart/Chart'
+import { useVisibleCandles, useActiveTokenKey } from '../hooks/useDerived'
+import { Chart, type ChartHandle, type ChartMarker } from '../chart/Chart'
 import { ReplayControls } from './ReplayControls'
+import { formatQty } from '../lib/format'
 import {
   IconCandles, IconLineChart, IconFullscreen, IconCamera, IconChevron,
   IconCursor, IconTrendline, IconHLine, IconRay, IconRect, IconTrash,
@@ -93,6 +94,21 @@ export function ChartPanel() {
     [prefs.ema, prefs.ma, prefs.boll, prefs.macd, prefs.rsi, prefs.kdj, prefs.vol],
   )
 
+  const account = useSim((s) => s.accounts[s.mode])
+  const activeKey = useActiveTokenKey()
+  const markers: ChartMarker[] = useMemo(() => {
+    if (!activeKey) return []
+    return account.trades
+      .filter((t) => t.tokenKey === activeKey)
+      .map((t) => ({
+        time: t.ts,
+        price: t.priceUsd,
+        side: t.side,
+        text: `${t.side === 'buy' ? '▲ BUY' : '▼ SELL'} ${formatQty(t.qtyToken)}`,
+      }))
+  }, [account.trades, activeKey])
+  const avgEntry = activeKey ? account.positions[activeKey]?.avgEntryUsd ?? null : null
+
   const pickTool = (id: string, overlay: string | null) => {
     setTool(id)
     if (overlay) chartRef.current?.startDrawing(overlay)
@@ -149,7 +165,7 @@ export function ChartPanel() {
           </button>
         </div>
         <div className="chartwrap">
-          <Chart ref={chartRef} candles={candles} chartType={chartType} scaleMode={scaleMode} indicators={indicators} />
+          <Chart ref={chartRef} candles={candles} chartType={chartType} scaleMode={scaleMode} indicators={indicators} avgEntry={avgEntry} markers={markers} />
           {loading && <div className="chart-overlay">Loading chart…</div>}
           {!loading && error && <div className="chart-overlay">{error}</div>}
           {!loading && !error && candles.length === 0 && <div className="chart-overlay">No chart data for this token.</div>}

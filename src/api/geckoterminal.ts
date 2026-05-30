@@ -61,3 +61,26 @@ export async function fetchOhlcv(chainId: string, poolAddress: string, tf: Timef
   cache.set(key, { at: Date.now(), data: out })
   return out
 }
+
+interface TokenInfoResponse {
+  data?: { attributes?: { image_url?: string | null } }
+}
+
+const imageCache = new Map<string, string | null>()
+
+/** Token logo from GeckoTerminal (fallback when DexScreener has none — e.g. Solana tokens). */
+export async function fetchTokenImage(chainId: string, tokenAddress: string): Promise<string | null> {
+  const network = toGeckoNetwork(chainId)
+  if (!network || !tokenAddress) return null
+  const key = `${network}/${tokenAddress}`
+  if (imageCache.has(key)) return imageCache.get(key) ?? null
+  try {
+    const json = await gtGet<TokenInfoResponse>(`/networks/${network}/tokens/${tokenAddress}`)
+    const url = json?.data?.attributes?.image_url
+    const valid = typeof url === 'string' && url.length > 0 && !/missing/i.test(url) ? url : null
+    imageCache.set(key, valid)
+    return valid
+  } catch {
+    return null
+  }
+}

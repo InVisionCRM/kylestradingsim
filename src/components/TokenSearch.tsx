@@ -70,7 +70,7 @@ export function TokenSearch() {
           ) : (
             results.map((p) => (
               <div className="res" key={`${p.chainId}:${p.pairAddress}`} onClick={() => pick(p)}>
-                <TokenIcon src={p.imageUrl} symbol={p.baseToken.symbol} size={20} cls="ic" />
+                <TokenIcon src={p.imageUrl} symbol={p.baseToken.symbol} tokenKey={`${p.chainId}:${p.pairAddress}`} size={20} cls="ic" />
                 <div>
                   <div className="s">{p.baseToken.symbol}</div>
                   <div className="ch">

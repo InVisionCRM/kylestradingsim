@@ -44,7 +44,7 @@ export function TopBar() {
         <TokenSearch />
         {pair && (
           <div className="tk">
-            <TokenIcon src={pair.imageUrl} symbol={pair.baseToken.symbol} size={24} />
+            <TokenIcon src={pair.imageUrl} symbol={pair.baseToken.symbol} tokenKey={`${pair.chainId}:${pair.pairAddress}`} size={24} />
             <div>
               <span className="sym">{pair.baseToken.symbol}</span>{' '}
               <span className="nm">{pair.baseToken.name || pair.chainId}</span>

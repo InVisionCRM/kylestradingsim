@@ -18,12 +18,25 @@ export interface ChartHandle {
   clearDrawings: () => void
   screenshot: () => string | null
 }
+export interface ChartMarker {
+  time: number
+  price: number
+  side: 'buy' | 'sell'
+  text: string
+}
 interface Props {
   candles: Candle[]
   chartType: ChartType
   scaleMode: ScaleMode
   indicators: IndicatorState
+  avgEntry: number | null
+  markers: ChartMarker[]
 }
+
+// overlay groups so "Clear" only removes user drawings, never markers / avg line
+const G_USER = 'pdx-user'
+const G_POS = 'pdx-pos'
+const G_TRADES = 'pdx-trades'
 
 /** Our indicator keys → KLineChart built-in indicator names, and whether they overlay the candle pane. */
 const IND: Record<IndicatorKey, { name: string; overlay: boolean }> = {
@@ -81,7 +94,10 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
   }
 }
 
-export const Chart = forwardRef<ChartHandle, Props>(function Chart({ candles, chartType, scaleMode, indicators }, ref) {
+export const Chart = forwardRef<ChartHandle, Props>(function Chart(
+  { candles, chartType, scaleMode, indicators, avgEntry, markers },
+  ref,
+) {
   const elRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<KLineChartApi | null>(null)
   const candlesRef = useRef<Candle[]>([])
@@ -91,10 +107,10 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart({ candles, ch
 
   useImperativeHandle(ref, () => ({
     startDrawing: (name) => {
-      chartRef.current?.createOverlay(name)
+      chartRef.current?.createOverlay({ name, groupId: G_USER })
     },
     clearDrawings: () => {
-      chartRef.current?.removeOverlay()
+      chartRef.current?.removeOverlay({ groupId: G_USER })
     },
     screenshot: () => chartRef.current?.getConvertPictureUrl(true, 'png', '#101113') ?? null,
   }))
@@ -150,6 +166,43 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart({ candles, ch
       }
     })
   }, [indicators])
+
+  const hasData = candles.length > 0
+
+  // average-entry line (own group → not removed by "Clear")
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart) return
+    chart.removeOverlay({ groupId: G_POS })
+    if (avgEntry && avgEntry > 0 && hasData) {
+      chart.createOverlay({
+        name: 'priceLine',
+        groupId: G_POS,
+        lock: true,
+        points: [{ value: avgEntry }],
+        styles: { line: { color: '#e6ff3a' } },
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [avgEntry, hasData])
+
+  // trade markers (own group → not removed by "Clear")
+  useEffect(() => {
+    const chart = chartRef.current
+    if (!chart || !hasData) return
+    chart.removeOverlay({ groupId: G_TRADES })
+    markers.forEach((m) => {
+      chart.createOverlay({
+        name: 'simpleAnnotation',
+        groupId: G_TRADES,
+        lock: true,
+        points: [{ timestamp: m.time * 1000, value: m.price }],
+        extendData: m.text,
+        styles: { text: { color: m.side === 'buy' ? '#4ade80' : '#f87171', size: 12, weight: 'bold' } },
+      })
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [markers, hasData])
 
   return (
     <div className="chart-host">

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useMarket } from '../state/useMarket'
 import { useSim } from '../state/useSim'
-import { useCurrentPrice, useActiveTokenKey } from '../hooks/useDerived'
+import { useCurrentPrice, useActiveTokenKey, usePriceFor } from '../hooks/useDerived'
 import { getPair } from '../api/dexscreener'
 import { OrderPanel } from './OrderPanel'
 import { TokenIcon } from './TokenIcon'
@@ -50,18 +50,17 @@ function InfoGrid() {
 
 function PositionsMini() {
   const account = useSim((s) => s.accounts[s.mode])
-  const price = useCurrentPrice()
-  const activeKey = useActiveTokenKey()
+  const priceFor = usePriceFor()
   const list = Object.values(account.positions)
   if (list.length === 0) return <div className="info"><div className="center-msg" style={{ height: 60 }}>No open positions.</div></div>
   return (
     <div className="minilist">
       {list.map((p) => {
-        const px = p.tokenKey === activeKey ? price : p.avgEntryUsd
-        const up = px ? (px - p.avgEntryUsd) * p.qty : 0
+        const px = priceFor(p.tokenKey) ?? p.avgEntryUsd
+        const up = (px - p.avgEntryUsd) * p.qty
         return (
           <div className="row" key={p.tokenKey} onClick={() => goToToken(p.chainId, p.pairAddress)}>
-            <TokenIcon src={p.imageUrl} symbol={p.symbol} size={20} />
+            <TokenIcon symbol={p.symbol} src={p.imageUrl} tokenKey={p.tokenKey} size={20} />
             <span className="s">{p.symbol}</span>
             <div className="meta">
               <div className="p num">{formatQty(p.qty)}</div>

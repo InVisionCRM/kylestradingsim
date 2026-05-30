@@ -3,6 +3,7 @@ import { useMarketData } from '../state/useMarketData'
 import { useReplay } from '../state/useReplay'
 import { useSim } from '../state/useSim'
 import { useMarket } from '../state/useMarket'
+import { usePrices } from '../state/usePrices'
 import { accountEquity } from '../sim/engine'
 import { tokenKeyOf, type Candle } from '../types'
 
@@ -42,10 +43,22 @@ export function useCurrentPrice(): number | null {
   return livePrice ?? candles[candles.length - 1]?.close ?? null
 }
 
+/**
+ * Returns a pricing function valid for ANY held token. In live mode it reads the
+ * shared price map (fed by the positions loader); in replay only the active token
+ * has a meaningful price, others fall back to cost basis.
+ */
+export function usePriceFor(): (tokenKey: string) => number | null {
+  const mode = useSim((s) => s.mode)
+  const activeKey = useActiveTokenKey()
+  const activePrice = useCurrentPrice()
+  const map = usePrices((s) => s.map)
+  return (k) => (mode === 'replay' ? (k === activeKey ? activePrice : null) : map[k] ?? (k === activeKey ? activePrice : null))
+}
+
 export function useEquity(): { equity: number; totalPnl: number; cash: number; startingBalance: number } {
   const acc = useSim((s) => s.accounts[s.mode])
-  const price = useCurrentPrice()
-  const activeKey = useActiveTokenKey()
-  const equity = accountEquity(acc, (k) => (k === activeKey ? price : null))
+  const priceFor = usePriceFor()
+  const equity = accountEquity(acc, priceFor)
   return { equity, totalPnl: equity - acc.startingBalanceUsd, cash: acc.cashUsd, startingBalance: acc.startingBalanceUsd }
 }

@@ -1,13 +1,12 @@
 import { useState } from 'react'
 import { useSim } from '../state/useSim'
-import { useCurrentPrice, useActiveTokenKey } from '../hooks/useDerived'
+import { usePriceFor } from '../hooks/useDerived'
 import { formatUsd, formatPrice, formatQty, formatPct, signClass } from '../lib/format'
 
 export function Blotter() {
   const account = useSim((s) => s.accounts[s.mode])
   const mode = useSim((s) => s.mode)
-  const price = useCurrentPrice()
-  const activeKey = useActiveTokenKey()
+  const priceFor = usePriceFor()
   const [tab, setTab] = useState<'trades' | 'positions'>('trades')
 
   const positions = Object.values(account.positions)
@@ -74,9 +73,9 @@ export function Blotter() {
             </thead>
             <tbody>
               {positions.map((p) => {
-                const px = p.tokenKey === activeKey ? price : p.avgEntryUsd
-                const up = px ? (px - p.avgEntryUsd) * p.qty : 0
-                const mv = px ? p.qty * px : 0
+                const px = priceFor(p.tokenKey) ?? p.avgEntryUsd
+                const up = (px - p.avgEntryUsd) * p.qty
+                const mv = p.qty * px
                 const pct = p.avgEntryUsd && px ? (px / p.avgEntryUsd - 1) * 100 : 0
                 return (
                   <tr key={p.tokenKey}>

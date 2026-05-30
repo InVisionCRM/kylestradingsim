@@ -1,5 +1,5 @@
 import { useBootstrap } from './hooks/useBootstrap'
-import { useCandlesLoader, useLivePriceLoader, useReplayClock } from './hooks/useDataLoaders'
+import { useCandlesLoader, useLivePriceLoader, useReplayClock, usePositionPricesLoader } from './hooks/useDataLoaders'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { TopBar } from './components/TopBar'
 import { LeftPanel } from './components/LeftPanel'
@@ -11,6 +11,7 @@ export function App() {
   useBootstrap()
   useCandlesLoader()
   useLivePriceLoader()
+  usePositionPricesLoader()
   useReplayClock()
   useKeyboardShortcuts()
 
