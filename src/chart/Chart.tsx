@@ -241,7 +241,21 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
         lock: true,
         points: [{ timestamp: m.time * 1000, value: m.price }],
         extendData: m.text,
-        styles: { text: { color: m.side === 'buy' ? '#22d3ee' : '#f59e0b', size: 12, weight: 'bold' } },
+        styles: {
+          text: {
+            color: '#ffffff',
+            size: 12,
+            weight: 'bold',
+            backgroundColor: m.side === 'buy' ? '#16a34a' : '#dc2626',
+            borderColor: m.side === 'buy' ? '#16a34a' : '#dc2626',
+            borderSize: 0,
+            borderRadius: 4,
+            paddingLeft: 6,
+            paddingRight: 6,
+            paddingTop: 3,
+            paddingBottom: 3,
+          },
+        },
       })
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
