@@ -124,7 +124,8 @@ export function ChartPanel() {
     for (const t of walletTrades) {
       const price = priceAtTime(rawCandles, t.ts)
       if (price == null || !(price > 0)) continue
-      out.push({ time: t.ts, price, side: t.side, text: `${t.side === 'buy' ? '⊕ IN' : '⊖ OUT'} ${formatQty(t.amount)}` })
+      const label = t.kind === 'buy' ? '⊕ BUY' : t.kind === 'sell' ? '⊖ SELL' : '⇄ transfer'
+      out.push({ time: t.ts, price, side: t.kind, text: `${label} ${formatQty(t.amount)}` })
     }
     return out
   }, [mode, walletShow, walletTrades, walletTradesFor, walletTokenAddr, rawCandles])

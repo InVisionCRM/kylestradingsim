@@ -1,29 +1,31 @@
 import type { Candle } from '../types'
 import type { RawTransfer } from '../api/blockscout'
 
-export type TradeSide = 'buy' | 'sell'
+export type TradeKind = 'buy' | 'sell' | 'transfer'
 
-/** A wallet's on-chain acquisition/disposal of a token, ready to plot. */
+/** A wallet's on-chain token movement, ready to plot. */
 export interface WalletTrade {
   ts: number // unix seconds
-  side: TradeSide // buy = received into wallet, sell = sent out
+  kind: TradeKind // buy = bought from a pool, sell = sold to a pool, transfer = plain move
+  dir: 'in' | 'out' // direction relative to the wallet (kept so transfers can show in/out)
   amount: number // token units
   txHash: string
 }
 
-/**
- * Direction relative to the wallet: token IN (to == wallet) is a buy/acquire,
- * token OUT (from == wallet) is a sell/dispose. Self-transfers and unrelated
- * rows (neither side is the wallet) are skipped.
- */
-export function classifyTransfer(t: RawTransfer, wallet: string): TradeSide | null {
+/** Direction relative to the wallet: 'in' (to == wallet), 'out' (from == wallet), else null. */
+export function classifyDir(t: RawTransfer, wallet: string): 'in' | 'out' | null {
   const w = wallet.toLowerCase()
   const from = (t.from?.hash ?? '').toLowerCase()
   const to = (t.to?.hash ?? '').toLowerCase()
   const isIn = to === w
   const isOut = from === w
-  if (isIn === isOut) return null // both or neither → not a directional trade
-  return isIn ? 'buy' : 'sell'
+  if (isIn === isOut) return null // both or neither → not a directional move
+  return isIn ? 'in' : 'out'
+}
+
+/** The address on the other side of the transfer from the wallet. */
+export function counterparty(t: RawTransfer, dir: 'in' | 'out'): string {
+  return ((dir === 'in' ? t.from?.hash : t.to?.hash) ?? '').toLowerCase()
 }
 
 /** Raw transfer amount → human token units (total.value ÷ 10^total.decimals). */
@@ -41,17 +43,24 @@ export function tsSeconds(iso: string): number {
   return isFinite(ms) ? Math.floor(ms / 1000) : 0
 }
 
-/** Map raw transfers → plottable trades (directional, non-zero), oldest first. */
-export function toWalletTrades(transfers: RawTransfer[], wallet: string): WalletTrade[] {
+/**
+ * Map raw transfers → plottable trades. A transfer whose counterparty is one of the
+ * token's liquidity `pools` is a real DEX swap: IN from a pool = buy, OUT to a pool =
+ * sell. Everything else (wallet-to-wallet, airdrop, CEX) is a plain 'transfer'.
+ * `pools` must be lowercased addresses. Oldest first.
+ */
+export function toWalletTrades(transfers: RawTransfer[], wallet: string, pools: Set<string>): WalletTrade[] {
   const out: WalletTrade[] = []
   for (const t of transfers) {
-    const side = classifyTransfer(t, wallet)
-    if (!side) continue
+    const dir = classifyDir(t, wallet)
+    if (!dir) continue
     const amount = transferAmount(t)
     if (!(amount > 0)) continue
     const ts = tsSeconds(t.timestamp)
     if (!ts) continue
-    out.push({ ts, side, amount, txHash: t.transaction_hash })
+    const isSwap = pools.has(counterparty(t, dir))
+    const kind: TradeKind = isSwap ? (dir === 'in' ? 'buy' : 'sell') : 'transfer'
+    out.push({ ts, kind, dir, amount, txHash: t.transaction_hash })
   }
   return out.sort((a, b) => a.ts - b.ts)
 }

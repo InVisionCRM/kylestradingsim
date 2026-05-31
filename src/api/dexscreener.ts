@@ -89,6 +89,12 @@ export async function getTokenTopPair(chainId: string, tokenAddress: string): Pr
   return pairs[0] ?? null
 }
 
+/** Every known pool address for a token (lowercased) — used to tell DEX swaps from plain transfers. */
+export async function getTokenPoolAddresses(chainId: string, tokenAddress: string): Promise<string[]> {
+  const data = await dsGet<RawPair[]>(`/tokens/v1/${chainId}/${tokenAddress}`)
+  return (Array.isArray(data) ? data : []).map((p) => (p.pairAddress || '').toLowerCase()).filter(Boolean)
+}
+
 interface BoostEntry {
   chainId: string
   tokenAddress: string

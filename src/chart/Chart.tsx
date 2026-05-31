@@ -16,7 +16,7 @@ export interface ChartHandle {
 export interface ChartMarker {
   time: number
   price: number
-  side: 'buy' | 'sell'
+  side: 'buy' | 'sell' | 'transfer'
   text: string
 }
 export interface OrderLine {
@@ -243,11 +243,12 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
         extendData: m.text,
         styles: {
           text: {
-            color: '#ffffff',
+            color: m.side === 'transfer' ? '#cbd5e1' : '#ffffff',
             size: 12,
             weight: 'bold',
-            backgroundColor: m.side === 'buy' ? '#16a34a' : '#dc2626',
-            borderColor: m.side === 'buy' ? '#16a34a' : '#dc2626',
+            backgroundColor:
+              m.side === 'buy' ? '#16a34a' : m.side === 'sell' ? '#dc2626' : 'rgba(71, 85, 105, 0.55)',
+            borderColor: m.side === 'buy' ? '#16a34a' : m.side === 'sell' ? '#dc2626' : 'rgba(100, 116, 139, 0.6)',
             borderSize: 0,
             borderRadius: 4,
             paddingLeft: 6,

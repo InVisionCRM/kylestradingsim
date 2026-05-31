@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest'
-import { classifyTransfer, transferAmount, tsSeconds, toWalletTrades, priceAtTime } from './walletTrades'
+import { classifyDir, counterparty, transferAmount, tsSeconds, toWalletTrades, priceAtTime } from './walletTrades'
 import type { RawTransfer } from '../api/blockscout'
 import type { Candle } from '../types'
 
 const WALLET = '0xAbC0000000000000000000000000000000000001'
 const OTHER = '0x9990000000000000000000000000000000000009'
+const POOL = '0xPool000000000000000000000000000000000aaa'
+const pools = new Set([POOL.toLowerCase()])
 
 const xfer = (over: Partial<RawTransfer>): RawTransfer => ({
   timestamp: '2026-05-30T16:20:11.000000Z',
@@ -15,22 +17,23 @@ const xfer = (over: Partial<RawTransfer>): RawTransfer => ({
   ...over,
 })
 
-describe('classifyTransfer', () => {
-  it('token in (to == wallet) is a buy', () => {
-    expect(classifyTransfer(xfer({}), WALLET)).toBe('buy')
-  })
-  it('token out (from == wallet) is a sell', () => {
-    expect(classifyTransfer(xfer({ from: { hash: WALLET }, to: { hash: OTHER } }), WALLET)).toBe('sell')
-  })
-  it('is case-insensitive on addresses', () => {
-    expect(classifyTransfer(xfer({ to: { hash: WALLET.toLowerCase() } }), WALLET.toUpperCase())).toBe('buy')
-  })
-  it('skips self-transfers (both sides the wallet)', () => {
-    expect(classifyTransfer(xfer({ from: { hash: WALLET }, to: { hash: WALLET } }), WALLET)).toBeNull()
-  })
-  it('skips unrelated transfers (neither side the wallet)', () => {
-    expect(classifyTransfer(xfer({ from: { hash: OTHER }, to: { hash: OTHER } }), WALLET)).toBeNull()
-  })
+describe('classifyDir', () => {
+  it('token in (to == wallet)', () => expect(classifyDir(xfer({}), WALLET)).toBe('in'))
+  it('token out (from == wallet)', () =>
+    expect(classifyDir(xfer({ from: { hash: WALLET }, to: { hash: OTHER } }), WALLET)).toBe('out'))
+  it('is case-insensitive', () =>
+    expect(classifyDir(xfer({ to: { hash: WALLET.toLowerCase() } }), WALLET.toUpperCase())).toBe('in'))
+  it('skips self-transfers', () =>
+    expect(classifyDir(xfer({ from: { hash: WALLET }, to: { hash: WALLET } }), WALLET)).toBeNull())
+  it('skips unrelated transfers', () =>
+    expect(classifyDir(xfer({ from: { hash: OTHER }, to: { hash: OTHER } }), WALLET)).toBeNull())
+})
+
+describe('counterparty', () => {
+  it('is the sender on an in-transfer', () =>
+    expect(counterparty(xfer({ from: { hash: POOL } }), 'in')).toBe(POOL.toLowerCase()))
+  it('is the recipient on an out-transfer', () =>
+    expect(counterparty(xfer({ to: { hash: POOL } }), 'out')).toBe(POOL.toLowerCase()))
 })
 
 describe('transferAmount', () => {
@@ -52,19 +55,25 @@ describe('tsSeconds', () => {
   })
 })
 
-describe('toWalletTrades', () => {
-  it('keeps directional non-zero trades, sorted oldest first', () => {
+describe('toWalletTrades (pool-aware)', () => {
+  it('IN from a pool = buy, OUT to a pool = sell, everything else = transfer', () => {
     const trades = toWalletTrades(
       [
-        xfer({ timestamp: '2026-05-30T16:00:00Z', total: { value: '2000000000', decimals: '9' } }), // buy 2, later
-        xfer({ from: { hash: WALLET }, to: { hash: OTHER }, timestamp: '2026-05-30T15:00:00Z' }), // sell, earlier
+        xfer({ from: { hash: POOL }, to: { hash: WALLET }, timestamp: '2026-05-30T15:00:00Z' }), // buy
+        xfer({ from: { hash: WALLET }, to: { hash: POOL }, timestamp: '2026-05-30T16:00:00Z' }), // sell
+        xfer({ from: { hash: OTHER }, to: { hash: WALLET }, timestamp: '2026-05-30T17:00:00Z' }), // transfer in
         xfer({ from: { hash: WALLET }, to: { hash: WALLET } }), // self → dropped
         xfer({ total: { value: '0', decimals: '9' } }), // zero → dropped
       ],
       WALLET,
+      pools,
     )
-    expect(trades.map((t) => t.side)).toEqual(['sell', 'buy'])
-    expect(trades[1].amount).toBeCloseTo(2, 9)
+    expect(trades.map((t) => t.kind)).toEqual(['buy', 'sell', 'transfer'])
+    expect(trades.map((t) => t.dir)).toEqual(['in', 'out', 'in'])
+  })
+  it('with no known pools, everything is a transfer', () => {
+    const trades = toWalletTrades([xfer({ from: { hash: POOL }, to: { hash: WALLET } })], WALLET, new Set())
+    expect(trades[0].kind).toBe('transfer')
   })
 })
 
