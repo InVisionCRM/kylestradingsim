@@ -9,7 +9,7 @@ import { useCurrentPrice, useActiveTokenKey } from '../hooks/useDerived'
 import { SimError } from '../sim/errors'
 import { refFromPair, tokenKeyOf } from '../types'
 import { executionPrice, impactFraction } from '../sim/slippage'
-import { formatQty, formatPrice, formatUsd } from '../lib/format'
+import { formatQty, formatPrice, formatUsd, priceToInput, signClass } from '../lib/format'
 
 type OType = 'market' | 'limit' | 'stop'
 
@@ -40,6 +40,13 @@ export function OrderPanel() {
     if (focusTick > 0) inputRef.current?.focus()
   }, [focusTick])
 
+  // limit/stop tickets start from the market price instead of an empty field
+  const priceRef = useRef(price)
+  priceRef.current = price
+  useEffect(() => {
+    if (otype !== 'market') setTrigger(priceToInput(priceRef.current))
+  }, [otype, activeKey])
+
   const position = activeKey ? account.positions[activeKey] : undefined
   const sym = pair?.baseToken.symbol ?? ''
   const amt = Number(amount) || 0
@@ -47,6 +54,7 @@ export function OrderPanel() {
   const tokenQty = unit === 'TOKEN' ? amt : price ? amt / price : 0
   const fee = (usdValue * settings.feeBps) / 10000
   const trigPrice = Number(trigger) || 0
+  const trigPct = price && price > 0 && trigPrice > 0 ? (trigPrice / price - 1) * 100 : 0
 
   const liquidity = pair?.liquidityUsd ?? null
   const refPrice = otype === 'market' ? price ?? 0 : trigPrice
@@ -171,6 +179,35 @@ export function OrderPanel() {
             <input inputMode="decimal" placeholder="0.00" value={trigger} onChange={(e) => setTrigger(e.target.value.replace(/[^0-9.]/g, ''))} />
             <span className="cur">USD</span>
           </div>
+          {price != null && price > 0 && (
+            <div className="trigstep">
+              <button
+                onClick={() => {
+                  // snap to the next 5% step below the current offset from market
+                  const n = Math.round(((Number(trigger) || price) / price - 1) / 0.05) - 1
+                  setTrigger(priceToInput(price * (1 + n * 0.05)))
+                }}
+              >
+                −5%
+              </button>
+              <button
+                className={`mid num ${signClass(trigPct)}`}
+                title="Offset from market price — tap to reset to market"
+                onClick={() => setTrigger(priceToInput(price))}
+              >
+                {trigPct >= 0 ? '+' : '−'}
+                {Math.abs(trigPct).toFixed(1)}%
+              </button>
+              <button
+                onClick={() => {
+                  const n = Math.round(((Number(trigger) || price) / price - 1) / 0.05) + 1
+                  setTrigger(priceToInput(price * (1 + n * 0.05)))
+                }}
+              >
+                +5%
+              </button>
+            </div>
+          )}
         </div>
       )}
 

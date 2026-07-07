@@ -43,3 +43,23 @@ describe('formatUsd', () => {
     expect(formatUsd(12847.2)).toBe('$12,847.20')
   })
 })
+
+import { priceToInput } from './format'
+
+describe('priceToInput', () => {
+  it('formats normal prices with up to 4 decimals, no trailing zeros', () => {
+    expect(priceToInput(2.1432)).toBe('2.1432')
+    expect(priceToInput(2.5)).toBe('2.5')
+    expect(priceToInput(150)).toBe('150')
+  })
+  it('keeps 5 significant digits for sub-penny prices without scientific notation', () => {
+    expect(priceToInput(0.00002311)).toBe('0.00002311')
+    expect(priceToInput(0.00002311456)).toBe('0.000023115')
+    expect(priceToInput(0.000000019)).toBe('0.000000019')
+  })
+  it('returns empty for missing or non-positive values', () => {
+    expect(priceToInput(null)).toBe('')
+    expect(priceToInput(0)).toBe('')
+    expect(priceToInput(-3)).toBe('')
+  })
+})

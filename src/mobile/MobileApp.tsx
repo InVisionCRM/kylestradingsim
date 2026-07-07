@@ -1,6 +1,6 @@
+import { useRef } from 'react'
 import { useMarket } from '../state/useMarket'
 import { useSim } from '../state/useSim'
-import { useOrders } from '../state/useOrders'
 import { useOrder } from '../state/useOrder'
 import { useUi, type MobileTab } from '../state/useUi'
 import { useEquity, useCurrentPrice } from '../hooks/useDerived'
@@ -10,7 +10,6 @@ import { ChartPanel } from '../components/ChartPanel'
 import { RightPanel } from '../components/RightPanel'
 import { LeftPanel } from '../components/LeftPanel'
 import { Dashboard } from '../components/Dashboard'
-import { OrderPanel } from '../components/OrderPanel'
 import { FlexCard } from '../components/FlexCard'
 import { MobileSearch } from './MobileSearch'
 import { MobilePositions } from './MobilePositions'
@@ -68,19 +67,10 @@ function MobileTopBar() {
 const TABS: { id: MobileTab; label: string; icon: JSX.Element }[] = [
   {
     id: 'chart',
-    label: 'CHART',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 17l5-6 4 3 6-8 3 4" />
-      </svg>
-    ),
-  },
-  {
-    id: 'trade',
     label: 'TRADE',
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-        <path d="M7 10l-4 4 4 4M3 14h13M17 4l4 4-4 4M21 8H8" />
+        <path d="M3 17l5-6 4 3 6-8 3 4" />
       </svg>
     ),
   },
@@ -122,53 +112,50 @@ function MobileTabBar() {
   )
 }
 
-function MobileActionBar() {
+/**
+ * Chart + trading in ONE scrollable view: the chart fills the first screenful,
+ * the order ticket and position details sit right below it. The BUY/SELL bar
+ * sets the side and scrolls you straight to the ticket.
+ */
+function MobileTradeView() {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const ticketRef = useRef<HTMLDivElement>(null)
+
+  const scrollToTicket = () => ticketRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   const pick = (side: Side) => {
     useOrder.getState().setSide(side)
-    useUi.getState().openOrderSheet()
+    scrollToTicket()
   }
-  return (
-    <div className="mactionbar">
-      <button className="abtn buy" onClick={() => pick('buy')}>
-        BUY
-      </button>
-      <button className="abtn sell" onClick={() => pick('sell')}>
-        SELL
-      </button>
-    </div>
-  )
-}
-
-/** Bottom-sheet order ticket so you can trade without leaving the chart. */
-function OrderSheet() {
-  const open = useUi((s) => s.orderSheetOpen)
-  const pair = useMarket((s) => s.activePair)
-  const price = useCurrentPrice()
-  const orderCount = useOrders((s) => (s.orders[useSim.getState().mode] ?? []).length)
 
   return (
     <>
-      <div className={`mscrim ${open ? 'on' : ''}`} onClick={() => useUi.getState().closeOrderSheet()} />
-      <div className={`msheet ${open ? 'on' : ''}`} role="dialog" aria-label="Place order" aria-hidden={!open}>
-        <div className="grab" />
-        {pair && (
-          <div className="msheethead">
-            <TokenIcon src={pair.imageUrl} symbol={pair.baseToken.symbol} tokenKey={`${pair.chainId}:${pair.pairAddress}`} size={24} cls="ic" />
-            <span className="s">{pair.baseToken.symbol}</span>
-            {orderCount > 0 && <span className="n muted">{orderCount} open order{orderCount > 1 ? 's' : ''}</span>}
-            <span className="px num">{formatPriceUsd(price)}</span>
-          </div>
-        )}
-        <div className="msheetbody">{open && <OrderPanel />}</div>
+      <div className="mchartscroll" ref={scrollRef}>
+        <div className="mchartblock">
+          <ChartPanel />
+        </div>
+        <button className="tradehint" onClick={scrollToTicket}>
+          <IconChevron size={14} /> TRADE
+        </button>
+        <div ref={ticketRef} className="mticket">
+          <RightPanel />
+        </div>
+      </div>
+      <div className="mactionbar">
+        <button className="abtn buy" onClick={() => pick('buy')}>
+          BUY
+        </button>
+        <button className="abtn sell" onClick={() => pick('sell')}>
+          SELL
+        </button>
       </div>
     </>
   )
 }
 
 /**
- * Phone shell: chart-first single column with a bottom tab bar, persistent
- * Buy/Sell, full-screen search, and the order ticket as a bottom sheet.
- * All tabs stay mounted so the chart never re-initializes on tab switches.
+ * Phone shell: chart-first single column with a bottom tab bar, trading right
+ * below the chart in the same scroll, full-screen search, positions with flex
+ * cards. All tabs stay mounted so the chart never re-initializes on switches.
  */
 export function MobileApp() {
   const tab = useUi((s) => s.mobileTab)
@@ -178,11 +165,7 @@ export function MobileApp() {
       <MobileTopBar />
       <div className="mviews">
         <div className={`mview ${tab === 'chart' ? 'on' : ''}`}>
-          <ChartPanel />
-          <MobileActionBar />
-        </div>
-        <div className={`mview ${tab === 'trade' ? 'on' : ''}`}>
-          <RightPanel />
+          <MobileTradeView />
         </div>
         <div className={`mview ${tab === 'watch' ? 'on' : ''}`}>
           <LeftPanel />
@@ -192,7 +175,6 @@ export function MobileApp() {
         </div>
       </div>
       <MobileTabBar />
-      <OrderSheet />
       <MobileSearch />
       <FlexCard />
       <Dashboard />
