@@ -809,3 +809,67 @@ td.lab { font-family: var(--font); font-weight: 600; }
   font-weight: 800;
   letter-spacing: 0.05em;
 }
+
+/* ── DexScreener-style pair cards (search) ─────────────────── */
+.pclist { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px; }
+.paircard {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-radius: var(--r);
+  padding: 11px 12px;
+  color: var(--text);
+}
+.paircard:hover { border-color: var(--muted); }
+.paircard:active { transform: scale(0.99); }
+.pchead { display: flex; align-items: center; gap: 10px; }
+.pchead .ic { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; flex: none; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
+.pcid { flex: 1; min-width: 0; }
+.pcpair { display: flex; align-items: baseline; gap: 6px; min-width: 0; font-size: 13px; }
+.pcpair b { font-weight: 700; }
+.pcpair .q { color: var(--muted); }
+.pcpair .nm { color: var(--faint); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.dexb { font-size: 8px; font-weight: 700; letter-spacing: 0.08em; color: var(--faint); border: 1px solid var(--hair); border-radius: 4px; padding: 1px 4px; flex: none; }
+.pcpx { font-size: 14px; font-weight: 600; margin-top: 2px; }
+.pcpx .lab { color: var(--faint); font-size: 10px; font-weight: 400; }
+.pcgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 10px;
+  font-size: 12px;
+}
+.pcgrid span { border: 1px solid var(--hair-soft); border-radius: var(--r-sm); padding: 6px 9px; text-align: center; background: var(--panel2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pcgrid i { font-style: normal; color: var(--faint); font-size: 10px; letter-spacing: 0.05em; }
+.pcaddr { display: flex; justify-content: space-between; gap: 8px; margin-top: 9px; font-size: 10px; color: var(--faint); }
+.pcaddr b { font-weight: 400; color: var(--muted); }
+.paircard.slim .pcside { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; font-size: 11px; color: var(--muted); flex: none; }
+.paircard.slim .pcside i { font-style: normal; color: var(--faint); font-size: 9px; }
+
+/* recent searches chips */
+.rchips { display: flex; align-items: center; gap: 7px; padding: 12px 12px 4px; overflow-x: auto; scrollbar-width: none; }
+.rchips::-webkit-scrollbar { display: none; }
+.rchips .clock { flex: none; font-size: 13px; }
+.rchip {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 11px;
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.rchip .ic { width: 18px; height: 18px; border-radius: 50%; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 700; }
+.rchip:active { background: var(--panel2); }
+.rclear { flex: none; width: 34px; height: 34px; border: 1px solid var(--hair); border-radius: 999px; background: none; color: var(--faint); font-size: 13px; }
+
+/* desktop dropdown grows to fit cards */
+.results { width: 380px; max-height: 480px; }
+.results .shint { padding: 10px 14px 2px; font-size: 10px; letter-spacing: 0.12em; color: var(--faint); font-weight: 700; }

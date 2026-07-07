@@ -63,3 +63,32 @@ describe('priceToInput', () => {
     expect(priceToInput(-3)).toBe('')
   })
 })
+
+import { formatAge, shortAddr } from './format'
+
+describe('formatAge', () => {
+  const now = Date.now()
+  it('formats years and months', () => {
+    expect(formatAge(now - (2 * 365 + 8 * 30 + 26) * 86400000)).toBe('2y 8mo')
+    expect(formatAge(now - 365 * 86400000)).toBe('1y')
+  })
+  it('formats months, days and hours', () => {
+    expect(formatAge(now - (2 * 30 + 5) * 86400000)).toBe('2mo 5d')
+    expect(formatAge(now - (3 * 86400000 + 4 * 3600000))).toBe('3d 4h')
+    expect(formatAge(now - 2 * 3600000)).toBe('2h')
+    expect(formatAge(now - 5 * 60000)).toBe('5m')
+    expect(formatAge(now - 1000)).toBe('now')
+  })
+  it('handles missing values', () => {
+    expect(formatAge(null)).toBe('—')
+    expect(formatAge(0)).toBe('—')
+  })
+})
+
+describe('shortAddr', () => {
+  it('shortens long addresses and passes through short ones', () => {
+    expect(shortAddr('0xb5bc84f9b6d0373642d586b81979b067572f292e')).toBe('0xb5bc…292e')
+    expect(shortAddr('0xabc')).toBe('0xabc')
+    expect(shortAddr(null)).toBe('—')
+  })
+})

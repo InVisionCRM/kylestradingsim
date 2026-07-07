@@ -74,6 +74,34 @@ export function signClass(v: number | null | undefined): 'up' | 'down' | '' {
   return v > 0 ? 'up' : 'down'
 }
 
+/** Pair age like DexScreener: "2y 8mo", "5mo 26d", "3d 4h", "2h", "now". */
+export function formatAge(createdAtMs: number | null | undefined): string {
+  if (createdAtMs == null || !isFinite(createdAtMs) || createdAtMs <= 0) return '—'
+  const sec = Math.max(0, (Date.now() - createdAtMs) / 1000)
+  const d = Math.floor(sec / 86400)
+  const y = Math.floor(d / 365)
+  const mo = Math.floor((d % 365) / 30)
+  if (y > 0) return mo > 0 ? `${y}y ${mo}mo` : `${y}y`
+  if (mo > 0) {
+    const rd = d - mo * 30
+    return rd > 0 ? `${mo}mo ${rd}d` : `${mo}mo`
+  }
+  if (d > 0) {
+    const h = Math.floor((sec % 86400) / 3600)
+    return h > 0 ? `${d}d ${h}h` : `${d}d`
+  }
+  const h = Math.floor(sec / 3600)
+  if (h > 0) return `${h}h`
+  const m = Math.floor(sec / 60)
+  return m > 0 ? `${m}m` : 'now'
+}
+
+/** 0x1234…abcd */
+export function shortAddr(a: string | null | undefined): string {
+  if (!a) return '—'
+  return a.length > 12 ? `${a.slice(0, 6)}…${a.slice(-4)}` : a
+}
+
 /**
  * A price as a PLAIN editable string for input fields (no $, no grouping, no
  * subscript compaction) — 5 significant digits, never scientific notation.
