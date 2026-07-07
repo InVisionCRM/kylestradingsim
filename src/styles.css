@@ -730,3 +730,39 @@ td.lab { font-family: var(--font); font-weight: 600; }
   .ocard.near, .ocard.ready { animation: none; }
   .ometer .fill { transition: none; }
 }
+
+/* ── real wallet P&L rows (PulseX) ─────────────────────────── */
+.wpnlrow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--hair-soft);
+  background: none;
+  color: var(--text);
+  font-size: 12px;
+  text-align: left;
+  min-height: 40px;
+}
+.wpnlrow:hover { background: var(--panel); }
+.wpnlrow .s { flex: 1; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wpnlrow .num { font-size: 11px; }
+.wpnlrow .pct { min-width: 58px; text-align: right; }
+.wpnlrow .fx {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(99, 102, 241, 0.45);
+  border-radius: var(--r-sm);
+  color: var(--accent);
+  background: rgba(99, 102, 241, 0.1);
+}
+@media (hover: none) {
+  .wpnlrow { min-height: 48px; }
+  .wpnlrow .fx { width: 32px; height: 32px; }
+}

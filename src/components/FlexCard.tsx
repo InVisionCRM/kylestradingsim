@@ -87,9 +87,9 @@ function drawCard(ctx: CanvasRenderingContext2D, d: FlexInfo, theme: Theme): voi
   ctx.font = '800 40px system-ui, sans-serif'
   ctx.fillText('P A P E R D E X', 140, 106)
   ctx.font = '700 24px system-ui, sans-serif'
-  ctx.fillStyle = 'rgba(238,243,250,0.45)'
+  ctx.fillStyle = d.wallet ? '#2ee6a6' : 'rgba(238,243,250,0.45)'
   ctx.textAlign = 'right'
-  ctx.fillText('PAPER P&L', W - 72, 104)
+  ctx.fillText(d.wallet ? 'ON-CHAIN P&L' : 'PAPER P&L', W - 72, 104)
 
   // token row
   ctx.fillStyle = colorFor(d.symbol || '?')
@@ -115,7 +115,7 @@ function drawCard(ctx: CanvasRenderingContext2D, d: FlexInfo, theme: Theme): voi
   ctx.textAlign = 'left'
   ctx.fillStyle = 'rgba(238,243,250,0.4)'
   ctx.font = '600 26px system-ui, sans-serif'
-  ctx.fillText(d.closed ? 'CLOSED TRADE' : 'OPEN POSITION', 160, 330)
+  ctx.fillText(d.wallet ? 'REALIZED ON PULSEX' : d.closed ? 'CLOSED TRADE' : 'OPEN POSITION', 160, 330)
 
   // giant ROI
   const roiTxt = `${win ? '+' : '−'}${Math.abs(d.roiPct).toFixed(1)}%`
@@ -189,7 +189,7 @@ function drawCard(ctx: CanvasRenderingContext2D, d: FlexInfo, theme: Theme): voi
     1298,
   )
   ctx.textAlign = 'right'
-  ctx.fillText('Paper trading. Real skills.', W - 72, 1298)
+  ctx.fillText(d.wallet ? `${d.wallet} · verified on-chain` : 'Paper trading. Real skills.', W - 72, 1298)
 }
 
 /**

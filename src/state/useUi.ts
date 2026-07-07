@@ -11,6 +11,8 @@ export interface FlexInfo {
   markUsd: number
   /** true = realized (closed round trip), false = open position */
   closed: boolean
+  /** short wallet address — set for REAL on-chain P&L (PulseX) instead of paper trades */
+  wallet?: string
 }
 
 interface UiState {
