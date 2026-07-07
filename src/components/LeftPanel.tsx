@@ -15,24 +15,33 @@ function useWatchPrices(items: WatchItem[]): Record<string, Pair> {
   useEffect(() => {
     let alive = true
     const load = async () => {
+      if (document.hidden) return
+      const next: Record<string, Pair> = {}
       for (const it of items) {
         try {
           const p = await getPair(it.chainId, it.pairAddress)
           if (alive && p) {
             ensureLogo(p)
             if (p.priceUsd) usePrices.getState().setPrice(`${it.chainId}:${it.pairAddress}`, p.priceUsd, p.liquidityUsd)
-            setMap((m) => ({ ...m, [`${it.chainId}:${it.pairAddress}`]: p }))
+            next[`${it.chainId}:${it.pairAddress}`] = p
           }
         } catch {
           /* ignore transient */
         }
       }
+      // one state update per refresh cycle instead of one per token
+      if (alive && Object.keys(next).length) setMap((m) => ({ ...m, ...next }))
     }
     load()
     const id = setInterval(load, 30000)
+    const onVis = () => {
+      if (!document.hidden) load()
+    }
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       alive = false
       clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dep])

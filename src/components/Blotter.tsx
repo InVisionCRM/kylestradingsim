@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSim } from '../state/useSim'
+import { useUi } from '../state/useUi'
 import { usePriceFor } from '../hooks/useDerived'
 import { formatUsd, formatPrice, formatQty, formatPct, signClass } from '../lib/format'
 
@@ -69,6 +70,7 @@ export function Blotter() {
                 <th>LAST</th>
                 <th>VALUE</th>
                 <th>UNREALIZED P&amp;L</th>
+                <th />
               </tr>
             </thead>
             <tbody>
@@ -86,6 +88,24 @@ export function Blotter() {
                     <td>{formatUsd(mv)}</td>
                     <td className={signClass(up)}>
                       {formatUsd(up)} ({formatPct(pct)})
+                    </td>
+                    <td>
+                      <button
+                        className="ocancel"
+                        title="Share P&L card"
+                        onClick={() =>
+                          useUi.getState().openFlex({
+                            symbol: p.symbol,
+                            roiPct: pct,
+                            pnlUsd: up,
+                            entryUsd: p.avgEntryUsd,
+                            markUsd: px,
+                            closed: false,
+                          })
+                        }
+                      >
+                        ⤴
+                      </button>
                     </td>
                   </tr>
                 )

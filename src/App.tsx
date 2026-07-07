@@ -3,12 +3,15 @@ import { useCandlesLoader, useLivePriceLoader, useReplayClock, usePositionPrices
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useOrderEngine } from './hooks/useOrderEngine'
 import { useWalletTrades } from './hooks/useWalletTrades'
+import { useIsMobile } from './hooks/useIsMobile'
 import { TopBar } from './components/TopBar'
 import { LeftPanel } from './components/LeftPanel'
 import { ChartPanel } from './components/ChartPanel'
 import { RightPanel } from './components/RightPanel'
 import { Blotter } from './components/Blotter'
 import { Dashboard } from './components/Dashboard'
+import { FlexCard } from './components/FlexCard'
+import { MobileApp } from './mobile/MobileApp'
 
 export function App() {
   useBootstrap()
@@ -20,6 +23,9 @@ export function App() {
   useOrderEngine()
   useWalletTrades()
 
+  const isMobile = useIsMobile()
+  if (isMobile) return <MobileApp />
+
   return (
     <div className="app">
       <TopBar />
@@ -30,6 +36,7 @@ export function App() {
       </div>
       <Blotter />
       <Dashboard />
+      <FlexCard />
     </div>
   )
 }
