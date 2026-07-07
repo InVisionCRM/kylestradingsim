@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useSim } from '../state/useSim'
 import { useUi } from '../state/useUi'
 import { useMarket } from '../state/useMarket'
@@ -160,8 +161,9 @@ export function MobilePositions() {
       ))}
       <div style={{ height: 14 }} />
 
-      {confirm && (
-        <div className="confirm-overlay" onClick={() => setConfirm(false)}>
+      {confirm &&
+        createPortal(
+          <div className="confirm-overlay" onClick={() => setConfirm(false)}>
           <div className="confirm" onClick={(e) => e.stopPropagation()}>
             <h3>Reset {mode} account?</h3>
             <p>
@@ -181,8 +183,9 @@ export function MobilePositions() {
               </button>
             </div>
           </div>
-        </div>
-      )}
+        </div>,
+          document.body,
+        )}
     </div>
   )
 }
