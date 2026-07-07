@@ -6,6 +6,8 @@ import { useSim } from '../state/useSim'
 import { usePrices } from '../state/usePrices'
 import { fetchOhlcv } from '../api/geckoterminal'
 import { getPair } from '../api/dexscreener'
+import { fetchTape } from '../api/pulsex'
+import { useTape } from '../state/useTape'
 import { ensureLogo } from '../lib/logos'
 import { tokenKeyOf } from '../types'
 
@@ -79,6 +81,52 @@ export function useLivePriceLoader(): void {
       document.removeEventListener('visibilitychange', onVis)
     }
   }, [chainId, pairAddress, mode])
+}
+
+/**
+ * Live trade tape for PulseChain (PulseX) pairs — polls the PulseX subgraphs
+ * every 10s while the tab is visible. Other chains get an empty tape.
+ */
+export function useTradeTapeLoader(): void {
+  const chainId = useMarket((s) => s.activePair?.chainId)
+  const pairAddress = useMarket((s) => s.activePair?.pairAddress)
+  const baseAddress = useMarket((s) => s.activePair?.baseToken.address)
+
+  useEffect(() => {
+    if (chainId !== 'pulsechain' || !pairAddress || !baseAddress) {
+      useTape.getState().reset(null)
+      return
+    }
+    let alive = true
+    let inFlight = false
+    useTape.getState().reset(tokenKeyOf(chainId, pairAddress))
+
+    const poll = async () => {
+      if (document.hidden || inFlight) return
+      inFlight = true
+      try {
+        const { trades, ok } = await fetchTape(pairAddress, baseAddress)
+        if (!alive) return
+        if (ok) useTape.getState().merge(trades)
+        else useTape.getState().setError(true)
+      } catch {
+        if (alive) useTape.getState().setError(true)
+      } finally {
+        inFlight = false
+      }
+    }
+    poll()
+    const id = setInterval(poll, 10000)
+    const onVis = () => {
+      if (!document.hidden) poll()
+    }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      alive = false
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
+    }
+  }, [chainId, pairAddress, baseAddress])
 }
 
 /** Advances the replay cursor while playing. */

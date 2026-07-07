@@ -1,5 +1,5 @@
 import { useBootstrap } from './hooks/useBootstrap'
-import { useCandlesLoader, useLivePriceLoader, useReplayClock, usePositionPricesLoader } from './hooks/useDataLoaders'
+import { useCandlesLoader, useLivePriceLoader, useReplayClock, usePositionPricesLoader, useTradeTapeLoader } from './hooks/useDataLoaders'
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts'
 import { useOrderEngine } from './hooks/useOrderEngine'
 import { useWalletTrades } from './hooks/useWalletTrades'
@@ -18,6 +18,7 @@ export function App() {
   useCandlesLoader()
   useLivePriceLoader()
   usePositionPricesLoader()
+  useTradeTapeLoader()
   useReplayClock()
   useKeyboardShortcuts()
   useOrderEngine()

@@ -7,6 +7,7 @@ import { useOrders } from '../state/useOrders'
 import { orderLabel } from '../sim/orders'
 import { OrderPanel } from './OrderPanel'
 import { TokenIcon } from './TokenIcon'
+import { TradeTape } from './TradeTape'
 import { IconLink } from './icons'
 
 async function goToToken(chainId: string, pairAddress: string) {
@@ -103,7 +104,8 @@ export function RightPanel() {
   const orderCount = useOrders((s) => (s.orders[mode] ?? []).length)
   const price = useCurrentPrice()
   const activeKey = useActiveTokenKey()
-  const [tab, setTab] = useState<'info' | 'positions' | 'orders'>('info')
+  const [tab, setTab] = useState<'info' | 'tape' | 'positions' | 'orders'>('info')
+  const isPulse = pair?.chainId === 'pulsechain'
 
   const pos = activeKey ? account.positions[activeKey] : undefined
   const sym = pair?.baseToken.symbol ?? ''
@@ -151,6 +153,11 @@ export function RightPanel() {
         <button className={tab === 'info' ? 'on' : ''} onClick={() => setTab('info')}>
           INFO
         </button>
+        {isPulse && (
+          <button className={tab === 'tape' ? 'on' : ''} onClick={() => setTab('tape')}>
+            TRADES
+          </button>
+        )}
         <button className={tab === 'positions' ? 'on' : ''} onClick={() => setTab('positions')}>
           POSITIONS
         </button>
@@ -158,7 +165,15 @@ export function RightPanel() {
           ORDERS{orderCount ? ` (${orderCount})` : ''}
         </button>
       </div>
-      {tab === 'info' ? <InfoGrid /> : tab === 'positions' ? <PositionsMini /> : <OrdersList />}
+      {tab === 'info' || (tab === 'tape' && !isPulse) ? (
+        <InfoGrid />
+      ) : tab === 'tape' ? (
+        <TradeTape />
+      ) : tab === 'positions' ? (
+        <PositionsMini />
+      ) : (
+        <OrdersList />
+      )}
     </div>
   )
 }

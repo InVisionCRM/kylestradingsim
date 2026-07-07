@@ -613,3 +613,30 @@ td.lab { font-family: var(--font); font-weight: 600; }
   .msheet, .mscrim { transition: none; }
   .fade, .reveal { animation-duration: 0.01ms; }
 }
+
+/* ── live trade tape (PulseX subgraph) ─────────────────────── */
+.tape { padding-bottom: 6px; }
+.pressure { display: flex; align-items: center; gap: 9px; padding: 11px 14px 9px; font-size: 11px; }
+.pressure .track { flex: 1; height: 7px; border-radius: 4px; background: var(--down-soft); overflow: hidden; }
+.pressure .fill { height: 100%; background: var(--up); border-radius: 4px 0 0 4px; transition: width 0.6s ease; }
+.taperow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--hair-soft);
+  text-decoration: none; color: var(--text);
+  font-size: 11px;
+}
+.taperow:hover { background: var(--panel); }
+.taperow .side { flex: none; width: 20px; text-align: center; padding: 2px 0; }
+.taperow .tval { min-width: 62px; }
+.taperow .tqty { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taperow .tpx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.taperow .twho { text-align: right; flex: none; }
+.taperow .taddr { display: block; color: var(--muted); }
+.taperow .ttime { display: block; font-size: 9px; color: var(--faint); }
+.tapefoot { padding: 9px 14px; font-size: 9px; letter-spacing: 0.08em; color: var(--faint); text-align: center; }
+.tapeload { display: flex; flex-direction: column; gap: 8px; padding: 14px; }
+.tapeload .skeleton { height: 26px; }
+@media (hover: none) {
+  .taperow { padding: 10px 14px; }
+}
