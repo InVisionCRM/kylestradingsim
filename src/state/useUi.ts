@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type MobileTab = 'chart' | 'trade' | 'watch' | 'positions'
+export type MobileTab = 'chart' | 'watch' | 'positions'
 
 /** Everything the shareable P&L card needs to render. */
 export interface FlexInfo {
@@ -16,14 +16,11 @@ export interface FlexInfo {
 interface UiState {
   analyticsOpen: boolean
   mobileTab: MobileTab
-  orderSheetOpen: boolean
   searchOpen: boolean
   flex: FlexInfo | null
   openAnalytics: () => void
   closeAnalytics: () => void
   setMobileTab: (t: MobileTab) => void
-  openOrderSheet: () => void
-  closeOrderSheet: () => void
   openSearch: () => void
   closeSearch: () => void
   openFlex: (f: FlexInfo) => void
@@ -33,14 +30,11 @@ interface UiState {
 export const useUi = create<UiState>((set) => ({
   analyticsOpen: false,
   mobileTab: 'chart',
-  orderSheetOpen: false,
   searchOpen: false,
   flex: null,
   openAnalytics: () => set({ analyticsOpen: true }),
   closeAnalytics: () => set({ analyticsOpen: false }),
   setMobileTab: (mobileTab) => set({ mobileTab }),
-  openOrderSheet: () => set({ orderSheetOpen: true }),
-  closeOrderSheet: () => set({ orderSheetOpen: false }),
   openSearch: () => set({ searchOpen: true }),
   closeSearch: () => set({ searchOpen: false }),
   openFlex: (flex) => set({ flex }),

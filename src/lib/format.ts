@@ -73,3 +73,13 @@ export function signClass(v: number | null | undefined): 'up' | 'down' | '' {
   if (v == null || !isFinite(v) || v === 0) return ''
   return v > 0 ? 'up' : 'down'
 }
+
+/**
+ * A price as a PLAIN editable string for input fields (no $, no grouping, no
+ * subscript compaction) — 5 significant digits, never scientific notation.
+ */
+export function priceToInput(v: number | null | undefined): string {
+  if (v == null || !isFinite(v) || v <= 0) return ''
+  const dp = v >= 1 ? 4 : Math.min(14, Math.ceil(-Math.log10(v)) + 4)
+  return v.toFixed(dp).replace(/0+$/, '').replace(/\.$/, '')
+}

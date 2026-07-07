@@ -9,6 +9,7 @@ import { CancelledError } from '../api/client'
 import { getPair } from '../api/dexscreener'
 import { fetchTape } from '../api/pulsex'
 import { useTape } from '../state/useTape'
+import { useOrders } from '../state/useOrders'
 import { ensureLogo } from '../lib/logos'
 import { tokenKeyOf } from '../types'
 
@@ -181,23 +182,31 @@ export function useReplayClock(): void {
 }
 
 /**
- * Keeps a live price for EVERY token held in the live account, so total equity and
- * per-position P&L are correct regardless of which token is selected.
+ * Keeps a live price for EVERY token held in the live account AND every token
+ * with an open live order — so equity, per-position P&L, and the order cards'
+ * fill-proximity meters are correct regardless of which token is selected.
  */
 export function usePositionPricesLoader(): void {
   const positionKeys = useSim((s) => Object.keys(s.accounts.live.positions).join(','))
+  const orderKeys = useOrders((s) => (s.orders.live ?? []).map((o) => o.tokenKey).join(','))
 
   useEffect(() => {
-    if (!positionKeys) return
+    if (!positionKeys && !orderKeys) return
     let alive = true
     const load = async () => {
       if (document.hidden) return
-      const positions = useSim.getState().accounts.live.positions
-      for (const pos of Object.values(positions)) {
+      const targets = new Map<string, { chainId: string; pairAddress: string }>()
+      for (const pos of Object.values(useSim.getState().accounts.live.positions)) {
+        targets.set(pos.tokenKey, { chainId: pos.chainId, pairAddress: pos.pairAddress })
+      }
+      for (const o of useOrders.getState().orders.live ?? []) {
+        targets.set(o.tokenKey, { chainId: o.chainId, pairAddress: o.pairAddress })
+      }
+      for (const [tokenKey, t] of targets) {
         try {
-          const p = await getPair(pos.chainId, pos.pairAddress)
+          const p = await getPair(t.chainId, t.pairAddress)
           if (!alive || !p) continue
-          if (p.priceUsd) usePrices.getState().setPrice(pos.tokenKey, p.priceUsd, p.liquidityUsd)
+          if (p.priceUsd) usePrices.getState().setPrice(tokenKey, p.priceUsd, p.liquidityUsd)
           ensureLogo(p)
         } catch {
           /* transient */
@@ -215,5 +224,5 @@ export function usePositionPricesLoader(): void {
       clearInterval(id)
       document.removeEventListener('visibilitychange', onVis)
     }
-  }, [positionKeys])
+  }, [positionKeys, orderKeys])
 }
