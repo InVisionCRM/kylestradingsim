@@ -27,10 +27,19 @@ const cache = new Map<string, { at: number; data: Candle[] }>()
 const MAX_OHLCV_PAGES = 5
 
 /**
- * Historical OHLCV candles from GeckoTerminal, normalized to ascending,
- * de-duplicated `Candle[]` ready for Lightweight Charts.
+ * Historical OHLCV candles from GeckoTerminal, delivered PROGRESSIVELY:
+ * `onPage` fires after every page with the full ascending series so far, so the
+ * chart renders after ~1 request (~1000 bars) while deeper history streams in
+ * behind it. Aborting the signal stops paging immediately and drops any queued
+ * requests, so rapid timeframe switching never clogs the rate-limit queue.
  */
-export async function fetchOhlcv(chainId: string, poolAddress: string, tf: Timeframe): Promise<Candle[]> {
+export async function fetchOhlcvPaged(
+  chainId: string,
+  poolAddress: string,
+  tf: Timeframe,
+  onPage: (candles: Candle[], done: boolean) => void,
+  signal?: AbortSignal,
+): Promise<void> {
   const network = toGeckoNetwork(chainId)
   if (!network) throw new Error(`Charts aren't supported for chain "${chainId}" yet`)
 
@@ -38,19 +47,22 @@ export async function fetchOhlcv(chainId: string, poolAddress: string, tf: Timef
   const key = `${network}/${poolAddress}/${tf}`
   const ttl = Math.min(conf.seconds, 60) * 1000
   const hit = cache.get(key)
-  if (hit && Date.now() - hit.at < ttl) return hit.data
+  if (hit && Date.now() - hit.at < ttl) {
+    onPage(hit.data, true)
+    return
+  }
 
   // One call = up to 1000 bars; page backwards with before_timestamp for deep history.
   const base = `/networks/${network}/pools/${poolAddress}/ohlcv/${conf.path}?aggregate=${conf.aggregate}&limit=1000&currency=usd&token=base`
   const byTime = new Map<number, Candle>()
   let before: number | null = null
   let oldest = Infinity
+  let out: Candle[] = []
 
   for (let page = 0; page < MAX_OHLCV_PAGES; page++) {
     const path = before == null ? base : `${base}&before_timestamp=${before}`
-    const json = await gtGet<OhlcvResponse>(path)
+    const json = await gtGet<OhlcvResponse>(path, signal)
     const list = json?.data?.attributes?.ohlcv_list ?? []
-    if (!list.length) break
 
     let pageOldest = Infinity
     for (const r of list) {
@@ -63,16 +75,19 @@ export async function fetchOhlcv(chainId: string, poolAddress: string, tf: Timef
       if (time < pageOldest) pageOldest = time
     }
 
+    // ascending, unique times (chart requirement)
+    out = [...byTime.values()].sort((a, b) => a.time - b.time)
     // a short page means we've hit the start of available history; no progress also stops us
-    if (list.length < 1000 || !isFinite(pageOldest) || pageOldest >= oldest) break
+    const done =
+      page === MAX_OHLCV_PAGES - 1 || list.length < 1000 || !isFinite(pageOldest) || pageOldest >= oldest
+    if (signal?.aborted) return
+    onPage(out, done)
+    if (done) break
     oldest = pageOldest
     before = pageOldest
   }
 
-  // ascending, unique times (chart requirement)
-  const out = [...byTime.values()].sort((a, b) => a.time - b.time)
   cache.set(key, { at: Date.now(), data: out })
-  return out
 }
 
 interface TokenInfoResponse {

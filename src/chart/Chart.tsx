@@ -12,6 +12,8 @@ export interface ChartHandle {
   startDrawing: (overlayName: string) => void
   clearDrawings: () => void
   screenshot: () => string | null
+  /** jump back to the newest bar (used when re-enabling follow) */
+  scrollToLatest: () => void
 }
 export interface ChartMarker {
   time: number
@@ -36,6 +38,8 @@ interface Props {
   tokenKey: string
   orders: OrderLine[]
   onOrderMove: (id: string, price: number) => void
+  /** true = follow new bars at the right edge; false = hold position while data streams in */
+  follow: boolean
 }
 
 // overlay groups so "Clear" only removes user drawings, never markers / avg / order lines
@@ -105,15 +109,18 @@ function themeStyles(chartType: ChartType, scaleMode: ScaleMode): DeepPartial<St
 }
 
 export const Chart = forwardRef<ChartHandle, Props>(function Chart(
-  { candles, chartType, scaleMode, indicators, avgEntry, markers, walletMarkers, tokenKey, orders, onOrderMove },
+  { candles, chartType, scaleMode, indicators, avgEntry, markers, walletMarkers, tokenKey, orders, onOrderMove, follow },
   ref,
 ) {
   const elRef = useRef<HTMLDivElement>(null)
+  const gripRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<KLineChartApi | null>(null)
   const candlesRef = useRef<Candle[]>([])
   const paneIds = useRef<Record<string, string>>({})
   const selectedRef = useRef<string | null>(null)
   const draggingRef = useRef(false)
+  const followRef = useRef(follow)
+  followRef.current = follow
 
   useImperativeHandle(ref, () => ({
     startDrawing: (name) => {
@@ -134,6 +141,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
       chartRef.current?.removeOverlay({ groupId: G_USER })
     },
     screenshot: () => chartRef.current?.getConvertPictureUrl(true, 'png', '#0a1020') ?? null,
+    scrollToLatest: () => chartRef.current?.scrollToRealTime(),
   }))
 
   // init once
@@ -169,18 +177,101 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
       precisionRef.current = precision
       chart.setPriceVolumePrecision(precision, 2)
     }
-    // Replay ticks append one bar and live polls rewrite only the last bar; both
-    // keep every earlier element identical (same object refs from slice), so we
-    // can update incrementally instead of rebuilding the whole chart each tick.
+
+    // A full applyNewData RESETS the viewport (scroll + zoom snap to the newest
+    // bar), which yanks the chart out from under anyone studying history. So we
+    // detect the three incremental shapes our stores produce — same-array-object
+    // identity of the shared elements proves the series wasn't replaced — and
+    // route them through viewport-preserving APIs. Full rebuilds only remain for
+    // genuine dataset swaps (token/timeframe change, replay scrub).
     const n = candles.length
-    const appended = n === prev.length + 1 && n > 1 && candles[n - 2] === prev[n - 2]
-    const lastBarOnly = n === prev.length && n > 1 && candles[n - 2] === prev[n - 2] && candles[n - 1] !== prev[n - 1]
-    if (appended || lastBarOnly) {
-      chart.updateData(toKLine([candles[n - 1]])[0])
-    } else {
-      chart.applyNewData(toKLine(candles))
+    const k = n - prev.length
+    let handled = false
+    if (prev.length > 0 && n > 0) {
+      if (k === 0 && n > 1 && candles[n - 2] === prev[n - 2] && candles[n - 1] !== prev[n - 1]) {
+        // live poll rewrote the last bar
+        chart.updateData(toKLine([candles[n - 1]])[0])
+        handled = true
+      } else if (k === 1 && n > 1 && candles[n - 2] === prev[n - 2]) {
+        // replay tick appended one bar
+        const before = chart.getVisibleRange()
+        chart.updateData(toKLine([candles[n - 1]])[0])
+        if (!followRef.current) {
+          // hold the view still even at the right edge — new bars accumulate
+          // off-screen. klinecharts already anchors when scrolled into history
+          // (realTo unchanged); when the view followed, shift back exactly one
+          // bar width. (scrollByDistance(+d) reduces the right-edge offset.)
+          const after = chart.getVisibleRange()
+          if (after.realTo !== before.realTo) chart.scrollByDistance(chart.getBarSpace(), 0)
+        }
+        handled = true
+      } else if (k > 0 && candles[k] === prev[0]) {
+        // deep-history page prepended older bars; klinecharts keeps the view
+        // anchored to the newest bar for Forward loads, so nothing moves
+        chart.applyMoreData(toKLine(candles.slice(0, k)), false)
+        if (candles[n - 1] !== prev[prev.length - 1]) chart.updateData(toKLine([candles[n - 1]])[0])
+        handled = true
+      }
     }
+    if (!handled) chart.applyNewData(toKLine(candles))
   }, [candles])
+
+  // Vertical (price-axis) scaling, TradingView style: scroll or drag on the
+  // price scale to compress/expand the candles; double-click/tap to reset.
+  // Implemented by scaling the candle pane's top/bottom gap — v9 has no native
+  // y-zoom, and auto-scale means we can compress below fit but not crop above it.
+  useEffect(() => {
+    const grip = gripRef.current
+    if (!grip) return
+    let scale = 1
+    const clampGap = (v: number) => Math.min(0.47, Math.max(0.01, v))
+    const apply = (next: number) => {
+      scale = Math.min(6, Math.max(0.05, next))
+      chartRef.current?.setPaneOptions({
+        id: CANDLE_PANE,
+        gap: { top: clampGap(0.2 * scale), bottom: clampGap(0.1 * scale) },
+      })
+    }
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault()
+      e.stopPropagation()
+      apply(scale * Math.exp(e.deltaY * 0.0012))
+    }
+    let dragFrom: { y: number; scale: number } | null = null
+    let lastTap = 0
+    const onDown = (e: PointerEvent) => {
+      e.preventDefault()
+      const now = Date.now()
+      if (now - lastTap < 300) {
+        apply(1) // double-click / double-tap resets
+        dragFrom = null
+        lastTap = 0
+        return
+      }
+      lastTap = now
+      dragFrom = { y: e.clientY, scale }
+      grip.setPointerCapture(e.pointerId)
+    }
+    const onMove = (e: PointerEvent) => {
+      if (!dragFrom) return
+      apply(dragFrom.scale * Math.exp((e.clientY - dragFrom.y) * -0.006))
+    }
+    const onUp = () => {
+      dragFrom = null
+    }
+    grip.addEventListener('wheel', onWheel, { passive: false })
+    grip.addEventListener('pointerdown', onDown)
+    grip.addEventListener('pointermove', onMove)
+    grip.addEventListener('pointerup', onUp)
+    grip.addEventListener('pointercancel', onUp)
+    return () => {
+      grip.removeEventListener('wheel', onWheel)
+      grip.removeEventListener('pointerdown', onDown)
+      grip.removeEventListener('pointermove', onMove)
+      grip.removeEventListener('pointerup', onUp)
+      grip.removeEventListener('pointercancel', onUp)
+    }
+  }, [])
 
   // theme: candle type + scale mode
   useEffect(() => {
@@ -330,6 +421,7 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
   return (
     <div className="chart-host">
       <div ref={elRef} className="chart" />
+      <div ref={gripRef} className="ygrip" title="Scroll or drag to scale price · double-click to reset" />
     </div>
   )
 })

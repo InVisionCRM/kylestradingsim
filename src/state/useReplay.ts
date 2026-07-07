@@ -6,6 +6,8 @@ interface ReplayState {
   speed: number
   length: number
   init: (length: number) => void
+  /** Deep-history pages prepend older bars; shift the cursor so it stays on the same bar. */
+  extend: (newLength: number) => void
   setCursor: (n: number) => void
   play: () => void
   pause: () => void
@@ -22,6 +24,12 @@ export const useReplay = create<ReplayState>((set, get) => ({
   length: 0,
   init: (length) =>
     set({ length, cursor: length > 1 ? Math.floor(length * 0.6) : Math.max(0, length - 1), playing: false }),
+  extend: (newLength) =>
+    set((s) => {
+      const prepended = newLength - s.length
+      if (prepended <= 0) return {}
+      return { length: newLength, cursor: Math.min(newLength - 1, s.cursor + prepended) }
+    }),
   setCursor: (n) => {
     const { length } = get()
     set({ cursor: Math.max(0, Math.min(length - 1, Math.round(n))) })

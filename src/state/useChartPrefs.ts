@@ -9,9 +9,12 @@ interface ChartPrefsState {
   indicators: Record<string, boolean>
   chartType: ChartType
   scaleMode: ScaleMode
+  /** auto-scroll to follow new bars at the right edge; off = hold position for studying history */
+  follow: boolean
   toggleIndicator: (name: string) => void
   setChartType: (t: ChartType) => void
   setScaleMode: (m: ScaleMode) => void
+  setFollow: (v: boolean) => void
 }
 
 export const useChartPrefs = create<ChartPrefsState>()(
@@ -20,9 +23,11 @@ export const useChartPrefs = create<ChartPrefsState>()(
       indicators: { VOL: true },
       chartType: 'candles',
       scaleMode: 'normal',
+      follow: true,
       toggleIndicator: (name) => set((s) => ({ indicators: { ...s.indicators, [name]: !s.indicators[name] } })),
       setChartType: (chartType) => set({ chartType }),
       setScaleMode: (m) => set((s) => ({ scaleMode: s.scaleMode === m ? 'normal' : m })),
+      setFollow: (follow) => set({ follow }),
     }),
     { name: 'paperdex.chartprefs.v4' },
   ),
