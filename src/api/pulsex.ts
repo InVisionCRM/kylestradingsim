@@ -82,7 +82,7 @@ export function swapToTape(s: RawSwap, baseTokenAddress: string): TapeTrade | nu
   }
 }
 
-async function querySwaps(ep: Endpoint, query: string, variables: Record<string, unknown>): Promise<RawSwap[]> {
+async function queryEndpoint<T>(ep: Endpoint, query: string, variables: Record<string, unknown>): Promise<T> {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
   try {
@@ -93,10 +93,10 @@ async function querySwaps(ep: Endpoint, query: string, variables: Record<string,
       signal: ctrl.signal,
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
-    const json = (await res.json()) as { data?: { swaps?: RawSwap[] }; errors?: unknown[] }
-    if (!json.data?.swaps) throw new Error('subgraph error')
+    const json = (await res.json()) as { data?: T; errors?: unknown[] }
+    if (json.data == null) throw new Error('subgraph error')
     ep.fails = 0
-    return json.data.swaps
+    return json.data
   } catch (e) {
     ep.fails++
     if (ep.fails >= BREAKER_FAILS) ep.benchedUntil = Date.now() + BREAKER_COOLDOWN_MS
@@ -106,22 +106,34 @@ async function querySwaps(ep: Endpoint, query: string, variables: Record<string,
   }
 }
 
-/** Runs a swaps query against every healthy endpoint and merges the results. */
-async function queryAll(query: string, variables: Record<string, unknown>): Promise<{ swaps: RawSwap[]; ok: boolean }> {
+/**
+ * Runs a query against every healthy PulseX subgraph (v1 + v2) and merges the
+ * extracted rows. Shared by the trade tape, wallet P&L, and discovery feeds.
+ */
+export async function subgraphQueryAll<T>(
+  query: string,
+  variables: Record<string, unknown>,
+  extract: (data: unknown) => T[],
+): Promise<{ items: T[]; ok: boolean }> {
   const now = Date.now()
   const active = ENDPOINTS.filter((ep) => ep.benchedUntil <= now)
-  if (!active.length) return { swaps: [], ok: false }
+  if (!active.length) return { items: [], ok: false }
 
-  const results = await Promise.allSettled(active.map((ep) => querySwaps(ep, query, variables)))
-  const swaps: RawSwap[] = []
+  const results = await Promise.allSettled(active.map((ep) => queryEndpoint<unknown>(ep, query, variables)))
+  const items: T[] = []
   let ok = false
   for (const r of results) {
     if (r.status === 'fulfilled') {
       ok = true
-      swaps.push(...r.value)
+      items.push(...extract(r.value))
     }
   }
-  return { swaps, ok }
+  return { items, ok }
+}
+
+async function queryAll(query: string, variables: Record<string, unknown>): Promise<{ swaps: RawSwap[]; ok: boolean }> {
+  const { items, ok } = await subgraphQueryAll<RawSwap>(query, variables, (d) => (d as { swaps?: RawSwap[] }).swaps ?? [])
+  return { swaps: items, ok }
 }
 
 /**

@@ -1,28 +1,66 @@
 import { useEffect, useRef, useState } from 'react'
-import { searchPairs } from '../api/dexscreener'
+import { searchPairs, getPair } from '../api/dexscreener'
+import { fetchTopPulsePairs, fetchNewPulsePairs, type DiscoveredPair } from '../api/pulsexDiscovery'
 import { useMarket } from '../state/useMarket'
 import { useWatchlist } from '../state/useWatchlist'
+import { useRecents } from '../state/useRecents'
 import { useUi } from '../state/useUi'
 import type { Pair } from '../types'
-import { formatPriceUsd, formatCompactUsd } from '../lib/format'
+import { PairCard, RawPairRow } from '../components/PairCard'
 import { TokenIcon } from '../components/TokenIcon'
 import { IconSearch } from '../components/icons'
 
-/** Full-screen token search — replaces the desktop dropdown, which had no home on a phone. */
+/** PulseChain pairs first — that's the app's home turf. */
+function pulseFirst(pairs: Pair[]): Pair[] {
+  return [...pairs.filter((p) => p.chainId === 'pulsechain'), ...pairs.filter((p) => p.chainId !== 'pulsechain')]
+}
+
+function DiscoverList({ rows, onPick, onPickRaw }: { rows: DiscoveredPair[] | null; onPick: (p: Pair) => void; onPickRaw: (r: DiscoveredPair) => void }) {
+  if (rows === null) {
+    return (
+      <div className="tapeload">
+        {[0, 1, 2].map((i) => (
+          <div className="skeleton" key={i} style={{ height: 92 }} />
+        ))}
+      </div>
+    )
+  }
+  if (rows.length === 0) {
+    return <div className="center-msg" style={{ height: 60 }}>PulseX data unavailable right now.</div>
+  }
+  return (
+    <>
+      {rows.map((r) =>
+        r.pair ? <PairCard key={r.pairAddress} pair={r.pair} onPick={onPick} /> : <RawPairRow key={r.pairAddress} row={r} onPick={onPickRaw} />,
+      )}
+    </>
+  )
+}
+
+/** Full-screen token search: recents, Top on PulseChain, new PulseX pairs, card results. */
 export function MobileSearch() {
   const open = useUi((s) => s.searchOpen)
+  const recents = useRecents((s) => s.items)
   const [q, setQ] = useState('')
   const [results, setResults] = useState<Pair[]>([])
   const [busy, setBusy] = useState(false)
+  const [note, setNote] = useState<string | null>(null)
+  const [top, setTop] = useState<DiscoveredPair[] | null>(null)
+  const [fresh, setFresh] = useState<DiscoveredPair[] | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    if (open) {
-      setQ('')
-      setResults([])
-      // focus after the overlay paints so the keyboard opens reliably
-      requestAnimationFrame(() => inputRef.current?.focus())
-    }
+    if (!open) return
+    setQ('')
+    setResults([])
+    setNote(null)
+    requestAnimationFrame(() => inputRef.current?.focus())
+    fetchTopPulsePairs()
+      .then(setTop)
+      .catch(() => setTop([]))
+    fetchNewPulsePairs()
+      .then(setFresh)
+      .catch(() => setFresh([]))
   }, [open])
 
   useEffect(() => {
@@ -38,7 +76,7 @@ export function MobileSearch() {
       searchPairs(term)
         .then((r) => {
           if (!alive) return
-          setResults(r.slice(0, 20))
+          setResults(pulseFirst(r).slice(0, 20))
           setBusy(false)
         })
         .catch(() => {
@@ -60,8 +98,23 @@ export function MobileSearch() {
     useWatchlist
       .getState()
       .add({ chainId: p.chainId, pairAddress: p.pairAddress, symbol: p.baseToken.symbol, imageUrl: p.imageUrl })
+    useRecents
+      .getState()
+      .add({ chainId: p.chainId, pairAddress: p.pairAddress, symbol: p.baseToken.symbol, imageUrl: p.imageUrl })
     useUi.getState().closeSearch()
     useUi.getState().setMobileTab('chart')
+  }
+  const pickRecent = async (chainId: string, pairAddress: string) => {
+    setNote(null)
+    const p = await getPair(chainId, pairAddress).catch(() => null)
+    if (p) pick(p)
+    else setNote("Couldn't load that token right now.")
+  }
+  const pickRaw = async (row: DiscoveredPair) => {
+    setNote(null)
+    const p = row.pair ?? (await getPair('pulsechain', row.pairAddress).catch(() => null))
+    if (p) pick(p)
+    else setNote(`${row.token0Sym}/${row.token1Sym} isn't charted yet — try again in a few minutes.`)
   }
 
   return (
@@ -82,35 +135,54 @@ export function MobileSearch() {
           Cancel
         </button>
       </div>
+
       <div className="msearchlist">
-        {!q.trim() ? (
-          <div className="center-msg" style={{ height: 120 }}>
-            Search any token — WIF, BONK, or a pair address.
-          </div>
-        ) : busy && results.length === 0 ? (
-          <div className="center-msg" style={{ height: 120 }}>
-            Searching…
-          </div>
-        ) : results.length === 0 ? (
-          <div className="center-msg" style={{ height: 120 }}>
-            No matches — try a symbol like WIF or BONK.
-          </div>
-        ) : (
-          results.map((p) => (
-            <div className="row" key={`${p.chainId}:${p.pairAddress}`} onClick={() => pick(p)}>
-              <TokenIcon src={p.imageUrl} symbol={p.baseToken.symbol} tokenKey={`${p.chainId}:${p.pairAddress}`} size={28} cls="ic" />
-              <div className="rs">
-                <div className="s">{p.baseToken.symbol}</div>
-                <div className="n">
-                  {p.chainId} · {p.dexId}
-                </div>
-              </div>
-              <div className="meta">
-                <div className="p num">{formatPriceUsd(p.priceUsd)}</div>
-                <div className="c num muted">liq {formatCompactUsd(p.liquidityUsd)}</div>
-              </div>
+        {note && <div className="wnote err">{note}</div>}
+
+        {q.trim() ? (
+          busy && results.length === 0 ? (
+            <div className="center-msg" style={{ height: 120 }}>
+              Searching…
             </div>
-          ))
+          ) : results.length === 0 ? (
+            <div className="center-msg" style={{ height: 120 }}>
+              No matches — try a symbol like HEX or PLSX.
+            </div>
+          ) : (
+            <div className="pclist">
+              {results.map((p) => (
+                <PairCard key={`${p.chainId}:${p.pairAddress}`} pair={p} onPick={pick} />
+              ))}
+            </div>
+          )
+        ) : (
+          <>
+            {recents.length > 0 && (
+              <div className="rchips">
+                <span className="clock">🕐</span>
+                {recents.map((r) => (
+                  <button className="rchip" key={`${r.chainId}:${r.pairAddress}`} onClick={() => pickRecent(r.chainId, r.pairAddress)}>
+                    <TokenIcon symbol={r.symbol} src={r.imageUrl} tokenKey={`${r.chainId}:${r.pairAddress}`} size={18} cls="ic" />
+                    {r.symbol}
+                  </button>
+                ))}
+                <button className="rclear" title="Clear recent searches" onClick={() => useRecents.getState().clear()}>
+                  ⌫
+                </button>
+              </div>
+            )}
+
+            <div className="shint">TOP ON PULSECHAIN · 24H VOLUME</div>
+            <div className="pclist">
+              <DiscoverList rows={top} onPick={pick} onPickRaw={pickRaw} />
+            </div>
+
+            <div className="shint">NEW PAIRS ON PULSEX</div>
+            <div className="pclist">
+              <DiscoverList rows={fresh} onPick={pick} onPickRaw={pickRaw} />
+            </div>
+            <div style={{ height: 16 }} />
+          </>
         )}
       </div>
     </div>
