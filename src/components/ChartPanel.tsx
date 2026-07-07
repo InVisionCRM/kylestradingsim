@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useMarket } from '../state/useMarket'
 import { useMarketData } from '../state/useMarketData'
 import { useSim } from '../state/useSim'
@@ -70,29 +71,33 @@ function IndicatorsMenu({ mobile }: { mobile: boolean }) {
   )
 
   // On phones the dropdown is fragile (iOS scroll-container tap quirks), so
-  // indicators open as a full-screen sheet with an explicit backdrop instead.
+  // indicators open as a full-screen sheet instead — PORTALED to document.body,
+  // because iOS Safari clips position:fixed elements rendered inside scrollable
+  // ancestors (this is why the sheet "didn't show" when rendered in place).
   if (mobile) {
     return (
       <>
         <button className={`ddbtn ${anyOn ? 'on' : ''}`} onClick={() => setOpen(true)}>
           <IconLineChart size={14} /> Indicators <IconChevron size={14} />
         </button>
-        {open && (
-          <div className="indov" onClick={() => setOpen(false)}>
-            <div className="indsheet" onClick={(e) => e.stopPropagation()}>
-              <div className="indhead">
-                <span>Indicators</span>
-                <button className="shx" aria-label="Close" onClick={() => setOpen(false)}>
-                  ×
+        {open &&
+          createPortal(
+            <div className="indov" onClick={() => setOpen(false)}>
+              <div className="indsheet" onClick={(e) => e.stopPropagation()}>
+                <div className="indhead">
+                  <span>Indicators</span>
+                  <button className="shx" aria-label="Close" onClick={() => setOpen(false)}>
+                    ×
+                  </button>
+                </div>
+                <div className="indbody">{groups}</div>
+                <button className="inddone" onClick={() => setOpen(false)}>
+                  DONE
                 </button>
               </div>
-              <div className="indbody">{groups}</div>
-              <button className="inddone" onClick={() => setOpen(false)}>
-                DONE
-              </button>
-            </div>
-          </div>
-        )}
+            </div>,
+            document.body,
+          )}
       </>
     )
   }

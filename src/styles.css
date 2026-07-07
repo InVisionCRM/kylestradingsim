@@ -393,10 +393,6 @@ td.lab { font-family: var(--font); font-weight: 600; }
 }
 .rail.hstrip::-webkit-scrollbar { display: none; }
 .rail.hstrip .tool { width: 44px; height: 40px; flex: none; }
-/* the tfbar scrolls horizontally on mobile, which would clip the dropdown —
-   fixed positioning escapes the scroll container */
-.mview .ddmenu { position: fixed; top: calc(106px + env(safe-area-inset-top, 0px)); left: 12px; right: 12px; min-width: 0; }
-.mview .ddmenu.scrollmenu { max-height: 55dvh; }
 .mview .rtag { display: none; }
 .mview .replay { gap: 8px; }
 .tokbtn .tsym, .tokbtn .tprice { white-space: nowrap; }
@@ -475,7 +471,7 @@ td.lab { font-family: var(--font); font-weight: 600; }
 .msearchfield input { flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: var(--text); font-size: 16px; /* ≥16px: no iOS focus zoom */ }
 .msearchfield input::placeholder { color: var(--faint); }
 .mcancel { flex: none; font-size: 14px; font-weight: 600; color: var(--accent); background: none; border: 0; padding: 10px 4px; }
-.msearchlist { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.msearchlist { flex: 1; overflow-y: auto; }
 .msearchlist .row { min-height: 56px; }
 .msearchlist .rs { flex: 1; min-width: 0; }
 .msearchlist .n { font-size: 10px; color: var(--faint); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -645,7 +641,7 @@ td.lab { font-family: var(--font); font-weight: 600; }
 .mview .sb { flex: none; }
 
 /* ── combined chart + trade scroll (mobile) ────────────────── */
-.mchartscroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; }
+.mchartscroll { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; }
 .mchartblock { height: calc(100% - 40px); min-height: 340px; flex: none; display: flex; flex-direction: column; }
 .mchartblock > .col { flex: 1; min-height: 0; }
 .tradehint {
@@ -798,7 +794,7 @@ td.lab { font-family: var(--font); font-weight: 600; }
   font-weight: 700;
   font-size: 15px;
 }
-.indbody { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 8px; }
+.indbody { flex: 1; min-height: 0; overflow-y: auto; padding: 0 8px; }
 .indbody .ddrow { padding: 13px 10px; font-size: 14px; }
 .indbody .chk { width: 18px; height: 18px; border-radius: 5px; }
 .inddone {
