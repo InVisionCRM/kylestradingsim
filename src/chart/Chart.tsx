@@ -143,10 +143,12 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
     // decimalFoldThreshold folds long zero-runs into compact 0.0ₙ123 form for memecoin prices.
     const chart = init(el, { styles: themeStyles(chartType, scaleMode), decimalFoldThreshold: 3 })
     chartRef.current = chart
-    const onResize = () => chartRef.current?.resize()
-    window.addEventListener('resize', onResize)
+    // ResizeObserver (not window resize) so the chart also re-measures when its
+    // container changes — fullscreen, mobile tab switches, drawer toggles.
+    const ro = new ResizeObserver(() => chartRef.current?.resize())
+    ro.observe(el)
     return () => {
-      window.removeEventListener('resize', onResize)
+      ro.disconnect()
       dispose(el)
       chartRef.current = null
       paneIds.current = {}
@@ -155,14 +157,29 @@ export const Chart = forwardRef<ChartHandle, Props>(function Chart(
   }, [])
 
   // data + price precision (so sub-penny memecoin prices aren't rounded to 0.00)
+  const precisionRef = useRef(0)
   useEffect(() => {
+    const prev = candlesRef.current
     candlesRef.current = candles
     const chart = chartRef.current
     if (!chart) return
     const last = candles.length ? candles[candles.length - 1].close : 1
     const precision = last >= 1 ? 4 : last >= 0.01 ? 6 : last >= 0.0001 ? 8 : 10
-    chart.setPriceVolumePrecision(precision, 2)
-    chart.applyNewData(toKLine(candles))
+    if (precision !== precisionRef.current) {
+      precisionRef.current = precision
+      chart.setPriceVolumePrecision(precision, 2)
+    }
+    // Replay ticks append one bar and live polls rewrite only the last bar; both
+    // keep every earlier element identical (same object refs from slice), so we
+    // can update incrementally instead of rebuilding the whole chart each tick.
+    const n = candles.length
+    const appended = n === prev.length + 1 && n > 1 && candles[n - 2] === prev[n - 2]
+    const lastBarOnly = n === prev.length && n > 1 && candles[n - 2] === prev[n - 2] && candles[n - 1] !== prev[n - 1]
+    if (appended || lastBarOnly) {
+      chart.updateData(toKLine([candles[n - 1]])[0])
+    } else {
+      chart.applyNewData(toKLine(candles))
+    }
   }, [candles])
 
   // theme: candle type + scale mode

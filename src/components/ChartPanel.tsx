@@ -5,6 +5,7 @@ import { useSim } from '../state/useSim'
 import { useChartPrefs } from '../state/useChartPrefs'
 import { INDICATORS } from '../chart/indicatorCatalog'
 import { useVisibleCandles, useActiveTokenKey } from '../hooks/useDerived'
+import { useIsMobile } from '../hooks/useIsMobile'
 import { Chart, type ChartHandle, type ChartMarker, type OrderLine } from '../chart/Chart'
 import { ReplayControls } from './ReplayControls'
 import { useOrders } from '../state/useOrders'
@@ -89,6 +90,8 @@ export function ChartPanel() {
   const colRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<ChartHandle>(null)
   const [tool, setTool] = useState('cursor')
+  const isMobile = useIsMobile()
+  const [drawOpen, setDrawOpen] = useState(false)
 
   const account = useSim((s) => s.accounts[s.mode])
   const activeKey = useActiveTokenKey()
@@ -169,22 +172,42 @@ export function ChartPanel() {
           </button>
         </div>
         <div className="tools">
+          {isMobile && (
+            <button className={`ind ${drawOpen ? 'on' : ''}`} onClick={() => setDrawOpen((o) => !o)}>
+              DRAW
+            </button>
+          )}
           <IndicatorsMenu />
         </div>
       </div>
 
-      <div className="chartrow">
-        <div className="rail">
+      {isMobile && drawOpen && (
+        <div className="rail hstrip">
           {TOOLS.map((t) => (
             <button key={t.id} className={`tool ${tool === t.id ? 'on' : ''}`} title={t.title} onClick={() => pickTool(t.id, t.overlay)}>
               {t.icon}
             </button>
           ))}
-          <span className="sep" />
           <button className="tool" title="Delete all drawings" onClick={clearDrawings}>
             <IconTrash />
           </button>
         </div>
+      )}
+
+      <div className="chartrow">
+        {!isMobile && (
+          <div className="rail">
+            {TOOLS.map((t) => (
+              <button key={t.id} className={`tool ${tool === t.id ? 'on' : ''}`} title={t.title} onClick={() => pickTool(t.id, t.overlay)}>
+                {t.icon}
+              </button>
+            ))}
+            <span className="sep" />
+            <button className="tool" title="Delete all drawings" onClick={clearDrawings}>
+              <IconTrash />
+            </button>
+          </div>
+        )}
         <div className="chartwrap">
           <Chart
             ref={chartRef}
@@ -206,7 +229,18 @@ export function ChartPanel() {
       </div>
 
       <div className="statusbar">
-        <Clock />
+        {isMobile ? (
+          <div className="modes sm">
+            <button className={mode === 'live' ? 'on' : ''} onClick={() => useSim.getState().setMode('live')}>
+              LIVE
+            </button>
+            <button className={mode === 'replay' ? 'on' : ''} onClick={() => useSim.getState().setMode('replay')}>
+              REPLAY
+            </button>
+          </div>
+        ) : (
+          <Clock />
+        )}
         <span className="sb-spacer" />
         <button className={`sb ${scaleMode === 'log' ? 'on' : ''}`} title="Logarithmic scale" onClick={() => useChartPrefs.getState().setScaleMode('log')}>
           log

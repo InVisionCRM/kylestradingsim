@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLogos } from '../state/useLogos'
 
 const COLORS = ['#e8a03d', '#c9a27a', '#6fb7e0', '#2bb6a6', '#4aae5a', '#b98ce0', '#e06f8b', '#5ac1a0', '#d8a24a', '#7c9cf0']
-function colorFor(s: string): string {
+export function colorFor(s: string): string {
   let h = 0
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0
   return COLORS[h % COLORS.length]

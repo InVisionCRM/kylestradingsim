@@ -44,7 +44,7 @@ export function useCandlesLoader(): void {
   }, [chainId, pairAddress, tf])
 }
 
-/** Polls live price (and refreshes pair stats) every 5s while in live mode. */
+/** Polls live price (and refreshes pair stats) every 5s while in live mode; paused while the tab is hidden. */
 export function useLivePriceLoader(): void {
   const chainId = useMarket((s) => s.activePair?.chainId)
   const pairAddress = useMarket((s) => s.activePair?.pairAddress)
@@ -55,6 +55,7 @@ export function useLivePriceLoader(): void {
     let alive = true
 
     const poll = async () => {
+      if (document.hidden) return
       try {
         const p = await getPair(chainId, pairAddress)
         if (!alive || !p) return
@@ -68,9 +69,14 @@ export function useLivePriceLoader(): void {
     }
     poll()
     const id = setInterval(poll, 5000)
+    const onVis = () => {
+      if (!document.hidden) poll()
+    }
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       alive = false
       clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [chainId, pairAddress, mode])
 }
@@ -105,6 +111,7 @@ export function usePositionPricesLoader(): void {
     if (!positionKeys) return
     let alive = true
     const load = async () => {
+      if (document.hidden) return
       const positions = useSim.getState().accounts.live.positions
       for (const pos of Object.values(positions)) {
         try {
@@ -119,9 +126,14 @@ export function usePositionPricesLoader(): void {
     }
     load()
     const id = setInterval(load, 20000)
+    const onVis = () => {
+      if (!document.hidden) load()
+    }
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       alive = false
       clearInterval(id)
+      document.removeEventListener('visibilitychange', onVis)
     }
   }, [positionKeys])
 }
