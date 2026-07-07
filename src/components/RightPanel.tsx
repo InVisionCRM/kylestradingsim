@@ -4,8 +4,8 @@ import { useSim } from '../state/useSim'
 import { useCurrentPrice, useActiveTokenKey, usePriceFor } from '../hooks/useDerived'
 import { getPair } from '../api/dexscreener'
 import { useOrders } from '../state/useOrders'
-import { orderLabel } from '../sim/orders'
 import { OrderPanel } from './OrderPanel'
+import { OrderCards } from './OrderCards'
 import { TokenIcon } from './TokenIcon'
 import { TradeTape } from './TradeTape'
 import { IconLink } from './icons'
@@ -72,29 +72,6 @@ function PositionsMini() {
           </div>
         )
       })}
-    </div>
-  )
-}
-
-const NO_ORDERS: never[] = []
-
-function OrdersList() {
-  const mode = useSim((s) => s.mode)
-  const list = useOrders((s) => s.orders[mode] ?? NO_ORDERS)
-  if (!list.length) return <div className="info"><div className="center-msg" style={{ height: 60 }}>No open orders.</div></div>
-  return (
-    <div className="minilist">
-      {list.map((o) => (
-        <div className="orow" key={o.id}>
-          <span className={`okind ${o.kind}`}>{orderLabel(o)}</span>
-          <span className="osym">{o.symbol}</span>
-          <span className="oprice num">@ {formatPrice(o.price)}</span>
-          <span className="osize num">{o.sizeUsd != null ? formatUsd(o.sizeUsd) : o.sizeToken != null ? formatQty(o.sizeToken) : 'close'}</span>
-          <button className="ocancel" title="Cancel order" onClick={() => useOrders.getState().cancel(mode, o.id)}>
-            ×
-          </button>
-        </div>
-      ))}
     </div>
   )
 }
@@ -174,7 +151,7 @@ export function RightPanel() {
       ) : tab === 'positions' ? (
         <PositionsMini />
       ) : (
-        <OrdersList />
+        <OrderCards />
       )}
     </div>
   )
