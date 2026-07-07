@@ -29,10 +29,17 @@ interface RawSwap {
   pair: { token0: { id: string }; token1: { id: string } }
 }
 
-const QUERY = `query($pair: String!) {
+const TAPE_QUERY = `query($pair: String!) {
   swaps(first: 50, orderBy: timestamp, orderDirection: desc, where: { pair: $pair }) {
     id timestamp amount0In amount1In amount0Out amount1Out amountUSD to
     pair { token0 { id } token1 { id } }
+  }
+}`
+
+const WALLET_QUERY = `query($w: Bytes!) {
+  swaps(first: 1000, orderBy: timestamp, orderDirection: desc, where: { from: $w }) {
+    id timestamp amount0In amount1In amount0Out amount1Out amountUSD to
+    pair { token0 { id symbol } token1 { id symbol } }
   }
 }`
 
@@ -75,26 +82,21 @@ export function swapToTape(s: RawSwap, baseTokenAddress: string): TapeTrade | nu
   }
 }
 
-async function queryEndpoint(ep: Endpoint, pairAddress: string, baseTokenAddress: string): Promise<TapeTrade[]> {
+async function querySwaps(ep: Endpoint, query: string, variables: Record<string, unknown>): Promise<RawSwap[]> {
   const ctrl = new AbortController()
   const timer = setTimeout(() => ctrl.abort(), REQUEST_TIMEOUT_MS)
   try {
     const res = await fetch(ep.url, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ query: QUERY, variables: { pair: pairAddress.toLowerCase() } }),
+      body: JSON.stringify({ query, variables }),
       signal: ctrl.signal,
     })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const json = (await res.json()) as { data?: { swaps?: RawSwap[] }; errors?: unknown[] }
     if (!json.data?.swaps) throw new Error('subgraph error')
     ep.fails = 0
-    const out: TapeTrade[] = []
-    for (const s of json.data.swaps) {
-      const t = swapToTape(s, baseTokenAddress)
-      if (t) out.push(t)
-    }
-    return out
+    return json.data.swaps
   } catch (e) {
     ep.fails++
     if (ep.fails >= BREAKER_FAILS) ep.benchedUntil = Date.now() + BREAKER_COOLDOWN_MS
@@ -102,6 +104,24 @@ async function queryEndpoint(ep: Endpoint, pairAddress: string, baseTokenAddress
   } finally {
     clearTimeout(timer)
   }
+}
+
+/** Runs a swaps query against every healthy endpoint and merges the results. */
+async function queryAll(query: string, variables: Record<string, unknown>): Promise<{ swaps: RawSwap[]; ok: boolean }> {
+  const now = Date.now()
+  const active = ENDPOINTS.filter((ep) => ep.benchedUntil <= now)
+  if (!active.length) return { swaps: [], ok: false }
+
+  const results = await Promise.allSettled(active.map((ep) => querySwaps(ep, query, variables)))
+  const swaps: RawSwap[] = []
+  let ok = false
+  for (const r of results) {
+    if (r.status === 'fulfilled') {
+      ok = true
+      swaps.push(...r.value)
+    }
+  }
+  return { swaps, ok }
 }
 
 /**
@@ -113,18 +133,52 @@ export async function fetchTape(
   pairAddress: string,
   baseTokenAddress: string,
 ): Promise<{ trades: TapeTrade[]; ok: boolean }> {
-  const now = Date.now()
-  const active = ENDPOINTS.filter((ep) => ep.benchedUntil <= now)
-  if (!active.length) return { trades: [], ok: false }
-
-  const results = await Promise.allSettled(active.map((ep) => queryEndpoint(ep, pairAddress, baseTokenAddress)))
+  const { swaps, ok } = await queryAll(TAPE_QUERY, { pair: pairAddress.toLowerCase() })
   const trades: TapeTrade[] = []
-  let ok = false
-  for (const r of results) {
-    if (r.status === 'fulfilled') {
-      ok = true
-      trades.push(...r.value)
-    }
+  for (const s of swaps) {
+    const t = swapToTape(s, baseTokenAddress)
+    if (t) trades.push(t)
   }
   return { trades, ok }
+}
+
+/** One PulseX swap originated by the wallet's transaction — its real buys and sells. */
+export interface WalletSwap {
+  ts: number
+  amountUSD: number
+  amount0In: number
+  amount1In: number
+  amount0Out: number
+  amount1Out: number
+  token0: { id: string; symbol: string }
+  token1: { id: string; symbol: string }
+}
+
+/**
+ * A wallet's actual swap history on PulseX (both subgraphs, newest 1000 per
+ * version). Filtered by the swap `from` field — the TRANSACTION ORIGIN — so it
+ * covers every leg of the wallet's trades, including sells whose output lands
+ * on a router/aggregator first and multi-hop routes.
+ */
+export async function fetchWalletSwaps(wallet: string): Promise<{ swaps: WalletSwap[]; ok: boolean }> {
+  const { swaps, ok } = await queryAll(WALLET_QUERY, { w: wallet.toLowerCase() })
+  const out: WalletSwap[] = []
+  const seen = new Set<string>()
+  for (const s of swaps) {
+    if (seen.has(s.id)) continue // defensive: never double-count a swap across endpoints
+    seen.add(s.id)
+    const p = s.pair as { token0: { id: string; symbol?: string }; token1: { id: string; symbol?: string } }
+    out.push({
+      ts: Number(s.timestamp),
+      amountUSD: Number(s.amountUSD),
+      amount0In: Number(s.amount0In),
+      amount1In: Number(s.amount1In),
+      amount0Out: Number(s.amount0Out),
+      amount1Out: Number(s.amount1Out),
+      token0: { id: p.token0.id.toLowerCase(), symbol: p.token0.symbol ?? '?' },
+      token1: { id: p.token1.id.toLowerCase(), symbol: p.token1.symbol ?? '?' },
+    })
+  }
+  out.sort((a, b) => a.ts - b.ts)
+  return { swaps: out, ok }
 }

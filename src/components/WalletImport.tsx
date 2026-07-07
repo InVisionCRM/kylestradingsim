@@ -1,13 +1,79 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useWallet } from '../state/useWallet'
 import { useMarket } from '../state/useMarket'
+import { useUi } from '../state/useUi'
 import { getTokenTopPair } from '../api/dexscreener'
+import { fetchWalletSwaps } from '../api/pulsex'
+import { computeWalletPnl, type WalletTokenPnl } from '../lib/walletPnl'
 import { ensureLogo } from '../lib/logos'
 import type { TokenHolding } from '../api/blockscout'
-import { formatQty, formatCompactUsd } from '../lib/format'
+import { formatQty, formatCompactUsd, formatUsd, formatPct, signClass } from '../lib/format'
 import { TokenIcon } from './TokenIcon'
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`
+
+const IconShare = (
+  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 3v12M7 8l5-5 5 5M5 15v4h14v-4" />
+  </svg>
+)
+
+/** Real per-token P&L from the wallet's actual PulseX swaps, flexable as cards. */
+function WalletPnl({ address }: { address: string }) {
+  const [rows, setRows] = useState<WalletTokenPnl[] | null>(null)
+  const [failed, setFailed] = useState(false)
+
+  useEffect(() => {
+    let alive = true
+    setRows(null)
+    setFailed(false)
+    fetchWalletSwaps(address)
+      .then(({ swaps, ok }) => {
+        if (!alive) return
+        if (!ok) setFailed(true)
+        else setRows(computeWalletPnl(swaps).slice(0, 8))
+      })
+      .catch(() => alive && setFailed(true))
+    return () => {
+      alive = false
+    }
+  }, [address])
+
+  if (failed) return <div className="wnote dim">PulseX P&amp;L unavailable right now.</div>
+  if (rows === null) return <div className="wnote dim">Crunching PulseX trade history…</div>
+  if (rows.length === 0) return null
+
+  return (
+    <>
+      <div className="sechead" style={{ paddingTop: 8 }}>
+        PULSEX P&amp;L · REAL
+      </div>
+      {rows.map((r) => (
+        <button
+          key={r.tokenAddress}
+          className="wpnlrow"
+          title={`${r.buys} buys · ${r.sells} sells — tap to flex`}
+          onClick={() =>
+            useUi.getState().openFlex({
+              symbol: r.symbol,
+              roiPct: r.roiPct,
+              pnlUsd: r.realizedUsd,
+              entryUsd: r.avgEntryUsd,
+              markUsd: r.avgExitUsd,
+              closed: true,
+              wallet: short(address),
+            })
+          }
+        >
+          <span className="s">{r.symbol}</span>
+          <span className={`num ${signClass(r.realizedUsd)}`}>{formatUsd(r.realizedUsd)}</span>
+          <span className={`num pct ${signClass(r.roiPct)}`}>{formatPct(r.roiPct)}</span>
+          <span className="fx">{IconShare}</span>
+        </button>
+      ))}
+    </>
+  )
+}
 
 export function WalletImport() {
   const address = useWallet((s) => s.address)
@@ -107,6 +173,7 @@ export function WalletImport() {
             </div>
           )}
           {rowErr && <div className="wnote err">{rowErr}</div>}
+          {chain === 'pulsechain' && <WalletPnl address={address!} />}
           <div className="wlist scroll">
             {holdings.map((h) => {
               const key = `${chain}:${h.address}`
