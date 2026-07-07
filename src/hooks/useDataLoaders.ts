@@ -4,46 +4,78 @@ import { useMarketData } from '../state/useMarketData'
 import { useReplay } from '../state/useReplay'
 import { useSim } from '../state/useSim'
 import { usePrices } from '../state/usePrices'
-import { fetchOhlcv } from '../api/geckoterminal'
+import { fetchOhlcvPaged } from '../api/geckoterminal'
+import { CancelledError } from '../api/client'
 import { getPair } from '../api/dexscreener'
 import { fetchTape } from '../api/pulsex'
 import { useTape } from '../state/useTape'
 import { ensureLogo } from '../lib/logos'
 import { tokenKeyOf } from '../types'
 
-/** Loads OHLCV whenever the active pair or timeframe changes; resets the replay timeline. */
+/**
+ * Loads OHLCV whenever the active pair or timeframe changes.
+ *
+ * - Progressive: the chart renders after the first page (~1000 bars); deeper
+ *   history streams in behind it (the chart prepends without moving the view).
+ * - Stale-while-loading: a timeframe switch keeps the old series on screen
+ *   until the new one arrives; only a token switch blanks the chart.
+ * - Cancellable: switching again aborts the previous load immediately, so the
+ *   rate-limit queue never backs up.
+ */
 export function useCandlesLoader(): void {
   const chainId = useMarket((s) => s.activePair?.chainId)
   const pairAddress = useMarket((s) => s.activePair?.pairAddress)
   const tf = useMarket((s) => s.timeframe)
+  const reloadTick = useMarketData((s) => s.reloadTick)
 
   useEffect(() => {
     if (!chainId || !pairAddress) return
     let alive = true
+    const ctrl = new AbortController()
+    const pairKey = tokenKeyOf(chainId, pairAddress)
     const md = useMarketData.getState()
     md.setLoading(true)
     md.setError(null)
     md.setLivePrice(null)
+    if (md.candlesFor !== pairKey) {
+      // different token — the old series is meaningless, blank right away
+      md.setCandles([], null)
+      useReplay.getState().init(0)
+    }
 
-    fetchOhlcv(chainId, pairAddress, tf)
-      .then((candles) => {
+    let firstPage = true
+    fetchOhlcvPaged(
+      chainId,
+      pairAddress,
+      tf,
+      (candles, done) => {
         if (!alive) return
-        md.setCandles(candles)
-        md.setLoading(false)
-        useReplay.getState().init(candles.length)
-      })
-      .catch((e: unknown) => {
-        if (!alive) return
-        md.setCandles([])
-        md.setError(e instanceof Error ? e.message : 'Failed to load chart')
-        md.setLoading(false)
-        useReplay.getState().init(0)
-      })
+        const store = useMarketData.getState()
+        store.setCandles(candles, pairKey)
+        store.setError(null)
+        if (done) store.setLoading(false)
+        if (firstPage) {
+          firstPage = false
+          useReplay.getState().init(candles.length)
+        } else {
+          useReplay.getState().extend(candles.length)
+        }
+      },
+      ctrl.signal,
+    ).catch((e: unknown) => {
+      if (!alive || e instanceof CancelledError) return
+      const store = useMarketData.getState()
+      store.setLoading(false)
+      store.setError(e instanceof Error ? e.message : 'Failed to load chart')
+      // keep whatever series is on screen (old timeframe or partial pages) —
+      // a dead chart is worse than a stale one
+    })
 
     return () => {
       alive = false
+      ctrl.abort()
     }
-  }, [chainId, pairAddress, tf])
+  }, [chainId, pairAddress, tf, reloadTick])
 }
 
 /** Polls live price (and refreshes pair stats) every 5s while in live mode; paused while the tab is hidden. */

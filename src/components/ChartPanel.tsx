@@ -77,6 +77,8 @@ function IndicatorsMenu() {
   )
 }
 
+const NO_ORDERS: never[] = []
+
 export function ChartPanel() {
   const tf = useMarket((s) => s.timeframe)
   const mode = useSim((s) => s.mode)
@@ -86,6 +88,7 @@ export function ChartPanel() {
   const chartType = useChartPrefs((s) => s.chartType)
   const scaleMode = useChartPrefs((s) => s.scaleMode)
   const indicators = useChartPrefs((s) => s.indicators)
+  const follow = useChartPrefs((s) => s.follow)
 
   const colRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<ChartHandle>(null)
@@ -108,7 +111,7 @@ export function ChartPanel() {
   }, [account.trades, activeKey])
   const avgEntry = activeKey ? account.positions[activeKey]?.avgEntryUsd ?? null : null
 
-  const ordersAll = useOrders((s) => s.orders[mode] ?? [])
+  const ordersAll = useOrders((s) => s.orders[mode] ?? NO_ORDERS)
   const orderLines: OrderLine[] = useMemo(
     () => ordersAll.filter((o) => o.tokenKey === activeKey).map((o) => ({ id: o.id, price: o.price, kind: o.kind, side: o.side })),
     [ordersAll, activeKey],
@@ -221,10 +224,26 @@ export function ChartPanel() {
             tokenKey={activeKey ?? ''}
             orders={orderLines}
             onOrderMove={(id, p) => useOrders.getState().updatePrice(mode, id, p)}
+            follow={follow}
           />
-          {loading && <div className="chart-overlay">Loading chart…</div>}
-          {!loading && error && <div className="chart-overlay">{error}</div>}
+          {loading && candles.length === 0 && <div className="chart-overlay">Loading chart…</div>}
+          {!loading && error && candles.length === 0 && (
+            <div className="chart-overlay">
+              <span>
+                {error}{' '}
+                <button className="retry" onClick={() => useMarketData.getState().requestReload()}>
+                  Retry
+                </button>
+              </span>
+            </div>
+          )}
           {!loading && !error && candles.length === 0 && <div className="chart-overlay">No chart data for this token.</div>}
+          {loading && candles.length > 0 && <div className="chart-pill">Loading {tf}…</div>}
+          {!loading && error && candles.length > 0 && (
+            <button className="chart-pill err" onClick={() => useMarketData.getState().requestReload()}>
+              {error} · tap to retry
+            </button>
+          )}
         </div>
       </div>
 
@@ -242,6 +261,17 @@ export function ChartPanel() {
           <Clock />
         )}
         <span className="sb-spacer" />
+        <button
+          className={`sb ${follow ? 'on' : ''}`}
+          title="Auto-scroll to newest bars — turn off to study history without the chart moving"
+          onClick={() => {
+            const next = !follow
+            useChartPrefs.getState().setFollow(next)
+            if (next) chartRef.current?.scrollToLatest()
+          }}
+        >
+          auto⇥
+        </button>
         <button className={`sb ${scaleMode === 'log' ? 'on' : ''}`} title="Logarithmic scale" onClick={() => useChartPrefs.getState().setScaleMode('log')}>
           log
         </button>

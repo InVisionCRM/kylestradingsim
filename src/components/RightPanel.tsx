@@ -76,9 +76,11 @@ function PositionsMini() {
   )
 }
 
+const NO_ORDERS: never[] = []
+
 function OrdersList() {
   const mode = useSim((s) => s.mode)
-  const list = useOrders((s) => s.orders[mode] ?? [])
+  const list = useOrders((s) => s.orders[mode] ?? NO_ORDERS)
   if (!list.length) return <div className="info"><div className="center-msg" style={{ height: 60 }}>No open orders.</div></div>
   return (
     <div className="minilist">

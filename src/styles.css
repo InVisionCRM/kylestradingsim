@@ -640,3 +640,47 @@ td.lab { font-family: var(--font); font-weight: 600; }
 @media (hover: none) {
   .taperow { padding: 10px 14px; }
 }
+
+/* ── chart usability pass ──────────────────────────────────── */
+/* price-scale grip: scroll/drag on the y-axis to scale candles vertically */
+.ygrip {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 28px; /* leave the x-axis strip alone */
+  width: 52px;
+  z-index: 4;
+  cursor: ns-resize;
+  touch-action: none;
+}
+.chart-pill {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 7;
+  background: var(--panel2);
+  border: 1px solid var(--hair);
+  border-radius: 999px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  padding: 6px 13px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  pointer-events: none;
+}
+.chart-pill.err { color: var(--down); border-color: rgba(248, 113, 113, 0.45); pointer-events: auto; cursor: pointer; }
+.chart-overlay .retry {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 12px;
+  margin-left: 8px;
+  pointer-events: auto;
+}
+.mview .statusbar { overflow-x: auto; scrollbar-width: none; gap: 5px; }
+.mview .statusbar::-webkit-scrollbar { display: none; }
+.mview .sb { flex: none; }
