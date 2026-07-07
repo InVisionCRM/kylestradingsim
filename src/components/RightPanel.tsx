@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useMarket } from '../state/useMarket'
 import { useSim } from '../state/useSim'
 import { useCurrentPrice, useActiveTokenKey, usePriceFor } from '../hooks/useDerived'
@@ -85,6 +85,12 @@ export function RightPanel() {
   const activeKey = useActiveTokenKey()
   const [tab, setTab] = useState<'info' | 'tape' | 'positions' | 'orders'>('info')
   const isPulse = pair?.chainId === 'pulsechain'
+
+  // PulseChain pairs get a live tape — surface it by default so it's not
+  // hidden behind a tab nobody discovers; other chains default to INFO.
+  useEffect(() => {
+    setTab(pair?.chainId === 'pulsechain' ? 'tape' : 'info')
+  }, [activeKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const pos = activeKey ? account.positions[activeKey] : undefined
   const sym = pair?.baseToken.symbol ?? ''

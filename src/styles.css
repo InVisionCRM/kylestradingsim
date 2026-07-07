@@ -766,3 +766,50 @@ td.lab { font-family: var(--font); font-weight: 600; }
   .wpnlrow { min-height: 48px; }
   .wpnlrow .fx { width: 32px; height: 32px; }
 }
+
+/* ── mobile indicators sheet ───────────────────────────────── */
+.indov {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  background: rgba(5, 10, 20, 0.7);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.indsheet {
+  width: 100%;
+  max-width: 560px;
+  max-height: 80dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+.indhead {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 8px;
+  font-weight: 700;
+  font-size: 15px;
+}
+.indbody { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 0 8px; }
+.indbody .ddrow { padding: 13px 10px; font-size: 14px; }
+.indbody .chk { width: 18px; height: 18px; border-radius: 5px; }
+.inddone {
+  flex: none;
+  margin: 10px 16px 4px;
+  height: 46px;
+  border: 0;
+  border-radius: var(--r);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}

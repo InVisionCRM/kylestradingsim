@@ -44,36 +44,60 @@ export function useCandlesLoader(): void {
       useReplay.getState().init(0)
     }
 
-    let firstPage = true
-    fetchOhlcvPaged(
-      chainId,
-      pairAddress,
-      tf,
-      (candles, done) => {
-        if (!alive) return
+    // Mobile networks drop requests routinely (Safari: "Load failed") — retry
+    // the initial load automatically before bothering the user, and never
+    // surface an error for DEEP-HISTORY pages once the chart has rendered.
+    const RETRY_DELAYS = [5000, 12000, 25000]
+    let attempt = 0
+    let retryTimer: ReturnType<typeof setTimeout> | undefined
+    let replayInited = false
+
+    const start = () => {
+      let gotPage = false
+      const store0 = useMarketData.getState()
+      store0.setLoading(true)
+      store0.setError(null)
+      fetchOhlcvPaged(
+        chainId,
+        pairAddress,
+        tf,
+        (candles, done) => {
+          if (!alive) return
+          gotPage = true
+          const store = useMarketData.getState()
+          store.setCandles(candles, pairKey)
+          store.setError(null)
+          if (done) store.setLoading(false)
+          if (!replayInited) {
+            replayInited = true
+            useReplay.getState().init(candles.length)
+          } else {
+            useReplay.getState().extend(candles.length)
+          }
+        },
+        ctrl.signal,
+      ).catch((e: unknown) => {
+        if (!alive || e instanceof CancelledError) return
         const store = useMarketData.getState()
-        store.setCandles(candles, pairKey)
-        store.setError(null)
-        if (done) store.setLoading(false)
-        if (firstPage) {
-          firstPage = false
-          useReplay.getState().init(candles.length)
+        store.setLoading(false)
+        if (gotPage) return // the chart rendered; missing deep history isn't an error
+        const msg = e instanceof Error ? e.message : 'Failed to load chart'
+        if (attempt < RETRY_DELAYS.length) {
+          store.setError(`${msg} · retrying…`)
+          retryTimer = setTimeout(start, RETRY_DELAYS[attempt])
+          attempt++
         } else {
-          useReplay.getState().extend(candles.length)
+          store.setError(msg)
         }
-      },
-      ctrl.signal,
-    ).catch((e: unknown) => {
-      if (!alive || e instanceof CancelledError) return
-      const store = useMarketData.getState()
-      store.setLoading(false)
-      store.setError(e instanceof Error ? e.message : 'Failed to load chart')
-      // keep whatever series is on screen (old timeframe or partial pages) —
-      // a dead chart is worse than a stale one
-    })
+        // keep whatever series is on screen (old timeframe or partial pages) —
+        // a dead chart is worse than a stale one
+      })
+    }
+    start()
 
     return () => {
       alive = false
+      clearTimeout(retryTimer)
       ctrl.abort()
     }
   }, [chainId, pairAddress, tf, reloadTick])

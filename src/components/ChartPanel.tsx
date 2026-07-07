@@ -40,17 +40,18 @@ function Clock() {
   return <span className="clock num" title="Local time">{now.toLocaleTimeString([], { hour12: false })}</span>
 }
 
-function IndicatorsMenu() {
+function IndicatorsMenu({ mobile }: { mobile: boolean }) {
   const indicators = useChartPrefs((s) => s.indicators)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
-    const onDoc = (e: MouseEvent) => {
+    if (mobile) return
+    const onDoc = (e: PointerEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
     }
-    document.addEventListener('mousedown', onDoc)
-    return () => document.removeEventListener('mousedown', onDoc)
-  }, [])
+    document.addEventListener('pointerdown', onDoc)
+    return () => document.removeEventListener('pointerdown', onDoc)
+  }, [mobile])
 
   const anyOn = Object.values(indicators).some(Boolean)
   const row = (i: { name: string; label: string }) => (
@@ -59,20 +60,49 @@ function IndicatorsMenu() {
       {i.label}
     </button>
   )
+  const groups = (
+    <>
+      <div className="ddgroup">Price overlays</div>
+      {INDICATORS.filter((i) => i.overlay).map(row)}
+      <div className="ddgroup">Oscillators &amp; volume</div>
+      {INDICATORS.filter((i) => !i.overlay).map(row)}
+    </>
+  )
+
+  // On phones the dropdown is fragile (iOS scroll-container tap quirks), so
+  // indicators open as a full-screen sheet with an explicit backdrop instead.
+  if (mobile) {
+    return (
+      <>
+        <button className={`ddbtn ${anyOn ? 'on' : ''}`} onClick={() => setOpen(true)}>
+          <IconLineChart size={14} /> Indicators <IconChevron size={14} />
+        </button>
+        {open && (
+          <div className="indov" onClick={() => setOpen(false)}>
+            <div className="indsheet" onClick={(e) => e.stopPropagation()}>
+              <div className="indhead">
+                <span>Indicators</span>
+                <button className="shx" aria-label="Close" onClick={() => setOpen(false)}>
+                  ×
+                </button>
+              </div>
+              <div className="indbody">{groups}</div>
+              <button className="inddone" onClick={() => setOpen(false)}>
+                DONE
+              </button>
+            </div>
+          </div>
+        )}
+      </>
+    )
+  }
 
   return (
     <div className="dd" ref={ref}>
       <button className={`ddbtn ${anyOn ? 'on' : ''}`} onClick={() => setOpen((o) => !o)}>
         <IconLineChart size={14} /> Indicators <IconChevron size={14} />
       </button>
-      {open && (
-        <div className="ddmenu scrollmenu">
-          <div className="ddgroup">Price overlays</div>
-          {INDICATORS.filter((i) => i.overlay).map(row)}
-          <div className="ddgroup">Oscillators &amp; volume</div>
-          {INDICATORS.filter((i) => !i.overlay).map(row)}
-        </div>
-      )}
+      {open && <div className="ddmenu scrollmenu">{groups}</div>}
     </div>
   )
 }
@@ -181,7 +211,7 @@ export function ChartPanel() {
               DRAW
             </button>
           )}
-          <IndicatorsMenu />
+          <IndicatorsMenu mobile={isMobile} />
         </div>
       </div>
 

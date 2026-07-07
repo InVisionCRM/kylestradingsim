@@ -26,6 +26,8 @@ export async function getJson<T>(url: string, timeoutMs = 12000, signal?: AbortS
   } catch (e) {
     if (signal?.aborted) throw new CancelledError()
     if (e instanceof DOMException && e.name === 'AbortError') throw new Error('Request timed out')
+    // Safari reports fetch network failures as TypeError("Load failed") — surface something human
+    if (e instanceof TypeError) throw new Error("Can't reach the market data service")
     throw e
   } finally {
     clearTimeout(timer)
