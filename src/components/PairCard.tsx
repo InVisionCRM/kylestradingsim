@@ -16,14 +16,14 @@ export function PairCard({ pair, onPick }: { pair: Pair; onPick: (p: Pair) => vo
             <span className="q">/ {pair.quoteToken.symbol || pair.chainId}</span>
             <span className="nm">{pair.baseToken.name}</span>
           </div>
-          <div className="pcpx num">
+          <div className="pcpx">
             {formatPriceUsd(pair.priceUsd)}
             <span className="lab"> 24H:</span>{' '}
             <span className={signClass(pair.priceChange24h)}>{formatPct(pair.priceChange24h)}</span>
           </div>
         </div>
       </div>
-      <div className="pcgrid num">
+      <div className="pcgrid">
         <span>
           <i>MCAP:</i> {formatCompactUsd(pair.marketCap ?? pair.fdv)}
         </span>
@@ -62,7 +62,7 @@ export function RawPairRow({ row, onPick }: { row: DiscoveredPair; onPick: (row:
             <span className="nm">not charted yet</span>
           </div>
         </div>
-        <div className="pcside num">
+        <div className="pcside">
           <span>
             <i>LIQ:</i> {formatCompactUsd(row.reserveUsd)}
           </span>

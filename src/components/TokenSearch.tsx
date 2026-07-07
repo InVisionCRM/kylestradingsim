@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { searchPairs, getPair } from '../api/dexscreener'
+import { ensureLogo } from '../lib/logos'
 import { fetchTopPulsePairs, type DiscoveredPair } from '../api/pulsexDiscovery'
 import { useMarket } from '../state/useMarket'
 import { useWatchlist } from '../state/useWatchlist'
@@ -31,7 +32,12 @@ export function TokenSearch() {
     let alive = true
     const id = setTimeout(() => {
       searchPairs(term)
-        .then((r) => alive && setResults(pulseFirst(r).slice(0, 12)))
+        .then((r) => {
+          if (!alive) return
+          const list = pulseFirst(r).slice(0, 12)
+          list.slice(0, 8).forEach(ensureLogo)
+          setResults(list)
+        })
         .catch(() => alive && setResults([]))
     }, 280)
     return () => {

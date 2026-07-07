@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { searchPairs, getPair } from '../api/dexscreener'
+import { ensureLogo } from '../lib/logos'
 import { fetchTopPulsePairs, fetchNewPulsePairs, type DiscoveredPair } from '../api/pulsexDiscovery'
 import { useMarket } from '../state/useMarket'
 import { useWatchlist } from '../state/useWatchlist'
@@ -76,7 +77,9 @@ export function MobileSearch() {
       searchPairs(term)
         .then((r) => {
           if (!alive) return
-          setResults(pulseFirst(r).slice(0, 20))
+          const list = pulseFirst(r).slice(0, 20)
+          list.slice(0, 10).forEach(ensureLogo)
+          setResults(list)
           setBusy(false)
         })
         .catch(() => {

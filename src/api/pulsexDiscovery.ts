@@ -1,5 +1,6 @@
 import { subgraphQueryAll } from './pulsex'
 import { getPair } from './dexscreener'
+import { ensureLogo } from '../lib/logos'
 import type { Pair } from '../types'
 
 /**
@@ -20,8 +21,10 @@ export interface DiscoveredPair {
   pair: Pair | null
 }
 
+// date_gte over the last TWO UTC days — right after UTC midnight "today" has no
+// pairDayData entities yet, which made this section read empty in production.
 const TOP_QUERY = `query($d: Int!) {
-  pairDayDatas(first: 16, orderBy: dailyVolumeUSD, orderDirection: desc, where: { date: $d }) {
+  pairDayDatas(first: 32, orderBy: dailyVolumeUSD, orderDirection: desc, where: { date_gte: $d }) {
     pairAddress dailyVolumeUSD reserveUSD token0 { symbol } token1 { symbol }
   }
 }`
@@ -56,6 +59,7 @@ async function hydrate(rows: DiscoveredPair[]): Promise<void> {
     rows.slice(0, HYDRATE_LIMIT).map(async (r) => {
       try {
         r.pair = await getPair('pulsechain', r.pairAddress)
+        if (r.pair) ensureLogo(r.pair) // real token logos (GeckoTerminal fallback)
       } catch {
         r.pair = null
       }
@@ -67,7 +71,7 @@ async function hydrate(rows: DiscoveredPair[]): Promise<void> {
 export async function fetchTopPulsePairs(): Promise<DiscoveredPair[]> {
   const hit = cache.get('top')
   if (hit && Date.now() - hit.at < CACHE_MS) return hit.rows
-  const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400
+  const dayStart = Math.floor(Date.now() / 1000 / 86400) * 86400 - 86400
   const { items } = await subgraphQueryAll<RawDay>(
     TOP_QUERY,
     { d: dayStart },
@@ -91,7 +95,7 @@ export async function fetchTopPulsePairs(): Promise<DiscoveredPair[]> {
     if (rows.length >= HYDRATE_LIMIT) break
   }
   await hydrate(rows)
-  cache.set('top', { at: Date.now(), rows })
+  if (rows.length > 0) cache.set('top', { at: Date.now(), rows }) // never cache a failure
   return rows
 }
 
@@ -123,6 +127,6 @@ export async function fetchNewPulsePairs(): Promise<DiscoveredPair[]> {
     if (rows.length >= HYDRATE_LIMIT) break
   }
   await hydrate(rows)
-  cache.set('new', { at: Date.now(), rows })
+  if (rows.length > 0) cache.set('new', { at: Date.now(), rows }) // never cache a failure
   return rows
 }
