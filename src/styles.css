@@ -642,17 +642,6 @@ td.lab { font-family: var(--font); font-weight: 600; }
 }
 
 /* ── chart usability pass ──────────────────────────────────── */
-/* price-scale grip: scroll/drag on the y-axis to scale candles vertically */
-.ygrip {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 28px; /* leave the x-axis strip alone */
-  width: 52px;
-  z-index: 4;
-  cursor: ns-resize;
-  touch-action: none;
-}
 .chart-pill {
   position: absolute;
   top: 10px;

@@ -89,6 +89,7 @@ export function ChartPanel() {
   const scaleMode = useChartPrefs((s) => s.scaleMode)
   const indicators = useChartPrefs((s) => s.indicators)
   const follow = useChartPrefs((s) => s.follow)
+  const legend = useChartPrefs((s) => s.legend)
 
   const colRef = useRef<HTMLDivElement>(null)
   const chartRef = useRef<ChartHandle>(null)
@@ -225,6 +226,7 @@ export function ChartPanel() {
             orders={orderLines}
             onOrderMove={(id, p) => useOrders.getState().updatePrice(mode, id, p)}
             follow={follow}
+            legend={legend}
           />
           {loading && candles.length === 0 && <div className="chart-overlay">Loading chart…</div>}
           {!loading && error && candles.length === 0 && (
@@ -271,6 +273,13 @@ export function ChartPanel() {
           }}
         >
           auto⇥
+        </button>
+        <button
+          className={`sb ${legend ? 'on' : ''}`}
+          title="OHLCV legend — off shows it only while the crosshair is active"
+          onClick={() => useChartPrefs.getState().setLegend(!legend)}
+        >
+          ohlc
         </button>
         <button className={`sb ${scaleMode === 'log' ? 'on' : ''}`} title="Logarithmic scale" onClick={() => useChartPrefs.getState().setScaleMode('log')}>
           log
