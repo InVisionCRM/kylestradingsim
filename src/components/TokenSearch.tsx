@@ -7,6 +7,7 @@ import { useWatchlist } from '../state/useWatchlist'
 import { useRecents } from '../state/useRecents'
 import type { Pair } from '../types'
 import { PairCard } from './PairCard'
+import { TokenTile } from './TokenTile'
 import { TokenIcon } from './TokenIcon'
 import { IconSearch } from './icons'
 
@@ -123,15 +124,15 @@ export function TokenSearch() {
                 </div>
               )}
               <div className="shint">TOP ON PULSECHAIN · 24H VOLUME</div>
-              <div className="pclist">
-                {top === null ? (
-                  <div className="empty">Loading PulseX movers…</div>
-                ) : top.length === 0 ? (
-                  <div className="empty">PulseX data unavailable right now.</div>
-                ) : (
-                  top.filter((r) => r.pair).map((r) => <PairCard key={r.pairAddress} pair={r.pair!} onPick={pick} />)
-                )}
-              </div>
+              {top === null ? (
+                <div className="empty">Loading PulseX movers…</div>
+              ) : top.length === 0 ? (
+                <div className="empty">PulseX data unavailable right now.</div>
+              ) : (
+                <div className="tilegrid">
+                  {top.filter((r) => r.pair).map((r) => <TokenTile key={r.pairAddress} pair={r.pair!} onPick={pick} />)}
+                </div>
+              )}
             </>
           )}
         </div>

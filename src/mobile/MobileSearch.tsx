@@ -7,7 +7,8 @@ import { useWatchlist } from '../state/useWatchlist'
 import { useRecents } from '../state/useRecents'
 import { useUi } from '../state/useUi'
 import type { Pair } from '../types'
-import { PairCard, RawPairRow } from '../components/PairCard'
+import { PairCard } from '../components/PairCard'
+import { TokenTile, RawTokenTile } from '../components/TokenTile'
 import { TokenIcon } from '../components/TokenIcon'
 import { IconSearch } from '../components/icons'
 
@@ -19,9 +20,9 @@ function pulseFirst(pairs: Pair[]): Pair[] {
 function DiscoverList({ rows, onPick, onPickRaw }: { rows: DiscoveredPair[] | null; onPick: (p: Pair) => void; onPickRaw: (r: DiscoveredPair) => void }) {
   if (rows === null) {
     return (
-      <div className="tapeload">
-        {[0, 1, 2].map((i) => (
-          <div className="skeleton" key={i} style={{ height: 92 }} />
+      <div className="tilegrid" style={{ paddingTop: 30 }}>
+        {[0, 1, 2, 3].map((i) => (
+          <div className="skeleton" key={i} style={{ height: 110, borderRadius: 12 }} />
         ))}
       </div>
     )
@@ -30,11 +31,11 @@ function DiscoverList({ rows, onPick, onPickRaw }: { rows: DiscoveredPair[] | nu
     return <div className="center-msg" style={{ height: 60 }}>PulseX data unavailable right now.</div>
   }
   return (
-    <>
+    <div className="tilegrid">
       {rows.map((r) =>
-        r.pair ? <PairCard key={r.pairAddress} pair={r.pair} onPick={onPick} /> : <RawPairRow key={r.pairAddress} row={r} onPick={onPickRaw} />,
+        r.pair ? <TokenTile key={r.pairAddress} pair={r.pair} onPick={onPick} /> : <RawTokenTile key={r.pairAddress} row={r} onPick={onPickRaw} />,
       )}
-    </>
+    </div>
   )
 }
 
@@ -176,14 +177,10 @@ export function MobileSearch() {
             )}
 
             <div className="shint">TOP ON PULSECHAIN · 24H VOLUME</div>
-            <div className="pclist">
-              <DiscoverList rows={top} onPick={pick} onPickRaw={pickRaw} />
-            </div>
+            <DiscoverList rows={top} onPick={pick} onPickRaw={pickRaw} />
 
             <div className="shint">NEW PAIRS ON PULSEX</div>
-            <div className="pclist">
-              <DiscoverList rows={fresh} onPick={pick} onPickRaw={pickRaw} />
-            </div>
+            <DiscoverList rows={fresh} onPick={pick} onPickRaw={pickRaw} />
             <div style={{ height: 16 }} />
           </>
         )}

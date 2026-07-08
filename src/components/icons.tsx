@@ -70,3 +70,9 @@ export const IconRect = ({ size }: P) => (
 export const IconTrash = ({ size }: P) => (
   <svg {...base(size)}><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" /></svg>
 )
+export const IconXSocial = ({ size }: P) => (
+  <svg width={size ?? 14} height={size ?? 14} viewBox="0 0 24 24" fill="currentColor"><path d="M17.7 3H21l-7.2 8.3L22.3 21h-6.6l-5.2-6.1L4.6 21H1.3l7.7-8.9L1.7 3h6.8l4.7 5.5L17.7 3zm-1.2 16h1.8L7.1 4.9H5.2L16.5 19z" /></svg>
+)
+export const IconTelegram = ({ size }: P) => (
+  <svg width={size ?? 14} height={size ?? 14} viewBox="0 0 24 24" fill="currentColor"><path d="M21.9 4.6 18.9 19c-.2 1-.8 1.2-1.7.8l-4.6-3.4-2.2 2.1c-.3.3-.5.5-.9.5l.3-4.7L18.4 6c.4-.3-.1-.5-.6-.2L7.3 12.4l-4.5-1.4c-1-.3-1-1 .2-1.4l17.6-6.8c.8-.3 1.5.2 1.3 1.8z" /></svg>
+)
